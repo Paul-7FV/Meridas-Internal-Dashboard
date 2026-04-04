@@ -1,0 +1,1967 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meridas — Clipping Team Management</title>
+<link href="https://fonts.googleapis.com/css2?family=Encode+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0d0d0f;--bg2:#13131a;--bg3:#1a1a24;--bg4:#20202e;
+  --border:#1e1e2e;--border2:#2a2a3d;--border3:#333350;
+  --text:#f0f0f8;--text2:#8888aa;--text3:#44445a;
+  --blue:#00aeef;--blue2:#0090cc;--blue3:#006fa0;
+  --blue-bg:rgba(0,174,239,.08);--blue-bg2:rgba(0,174,239,.15);
+  --alpha:#7F77DD;--alpha-bg:rgba(127,119,221,.12);
+  --beta:#1D9E75;--beta-bg:rgba(29,158,117,.12);
+  --delta:#D85A30;--delta-bg:rgba(216,90,48,.12);
+  --gamma:#D4537E;--gamma-bg:rgba(212,83,126,.12);
+  --red:#e05555;--red-bg:rgba(224,85,85,.1);
+  --green:#3db87a;--green-bg:rgba(61,184,122,.1);
+  --amber:#e0a030;--amber-bg:rgba(224,160,48,.1);
+  --gold:#f5c518;--gold-bg:rgba(245,197,24,.12);
+  --purple:#9b59b6;--purple-bg:rgba(155,89,182,.1);
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'Encode Sans',sans-serif;overflow:hidden;}
+
+/* ── LOADING ── */
+.loading-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:1rem;}
+.loading-logo{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--blue);}
+.loading-spinner{width:32px;height:32px;border:2px solid var(--border2);border-top-color:var(--blue);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-text{font-size:12px;color:var(--text3);}
+
+/* ── LOGIN ── */
+.login-screen{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:999;}
+.login-box{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2.5rem 2rem;width:400px;max-width:95vw;}
+.login-logo{font-size:11px;font-weight:800;letter-spacing:.14em;color:var(--blue);margin-bottom:.4rem;}
+.login-title{font-size:22px;font-weight:800;margin-bottom:.3rem;}
+.login-sub{font-size:12px;color:var(--text3);margin-bottom:1.75rem;}
+.l-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);display:block;margin-bottom:6px;}
+.l-input{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:10px 14px;color:var(--text);font-family:'Encode Sans',sans-serif;font-size:14px;outline:none;margin-bottom:14px;transition:border-color .15s;}
+.l-input:focus{border-color:var(--blue);}
+.l-btn{width:100%;background:var(--blue);border:none;border-radius:8px;padding:11px;color:#000;font-family:'Encode Sans',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:background .15s;margin-bottom:10px;}
+.l-btn:hover{background:var(--blue2);}
+.l-btn-sec{width:100%;background:transparent;border:1px solid var(--border2);border-radius:8px;padding:10px;color:var(--text2);font-family:'Encode Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;}
+.l-btn-sec:hover{background:var(--bg3);color:var(--text);}
+.l-err{color:var(--red);font-size:12px;margin-top:6px;display:none;}
+.l-divider{border:none;border-top:1px solid var(--border);margin:1.25rem 0;}
+
+/* ── APP ── */
+.app{display:flex;height:100vh;width:100vw;overflow:hidden;}
+.sidebar{width:220px;min-width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;z-index:10;flex-shrink:0;overflow-y:auto;}
+.sidebar::-webkit-scrollbar{width:3px;}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border3);}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+.topbar{height:56px;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 1.5rem;gap:12px;flex-shrink:0;}
+.content{flex:1;overflow-y:auto;padding:1.5rem;}
+.content::-webkit-scrollbar{width:4px;}
+.content::-webkit-scrollbar-thumb{background:var(--border3);border-radius:2px;}
+
+/* ── SIDEBAR ── */
+.s-logo{padding:1.25rem 1.25rem 1rem;border-bottom:1px solid var(--border);}
+.s-logo-text{font-size:10px;font-weight:800;letter-spacing:.12em;color:var(--blue);line-height:1.4;}
+.s-logo-sub{font-size:9px;color:var(--text3);letter-spacing:.08em;margin-top:3px;}
+.s-section{padding:.9rem .75rem .3rem;font-size:9px;font-weight:700;letter-spacing:.15em;color:var(--text3);}
+.s-item{display:flex;align-items:center;gap:10px;padding:8px 1rem;margin:1px .5rem;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;color:var(--text2);transition:all .15s;user-select:none;}
+.s-item:hover{background:var(--bg3);color:var(--text);}
+.s-item.active{background:var(--blue-bg2);color:var(--blue);}
+.s-item svg{width:15px;height:15px;flex-shrink:0;}
+.s-badge{margin-left:auto;font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;}
+.nb-blue{background:var(--blue-bg);color:var(--blue);}
+.nb-red{background:var(--red-bg);color:var(--red);}
+.nb-green{background:var(--green-bg);color:var(--green);}
+.nb-amber{background:var(--amber-bg);color:var(--amber);}
+.s-user{margin-top:auto;padding:1rem;border-top:1px solid var(--border);}
+.s-user-info{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
+.s-av{width:30px;height:30px;border-radius:8px;background:var(--blue-bg2);color:var(--blue);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+
+/* ── BUTTONS ── */
+.btn{font-family:'Encode Sans',sans-serif;font-size:12px;font-weight:600;padding:7px 14px;border-radius:8px;cursor:pointer;border:1px solid var(--border2);background:var(--bg3);color:var(--text2);transition:all .15s;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.btn:hover{background:var(--bg4);color:var(--text);border-color:var(--border3);}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-blue{background:var(--blue);color:#000;border-color:var(--blue);font-weight:800;}
+.btn-blue:hover{background:var(--blue2);border-color:var(--blue2);color:#000;}
+.btn-danger{color:var(--red);border-color:rgba(224,85,85,.2);}
+.btn-danger:hover{background:var(--red-bg);}
+.btn-green{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.btn svg{width:14px;height:14px;}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.5rem;}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:16px 18px;position:relative;}
+.stat-card.accent{border-top:2px solid var(--blue);}
+.stat-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:8px;}
+.stat-val{font-size:26px;font-weight:800;line-height:1;}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:6px;}
+
+/* ── CHARTS ── */
+.charts-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:1.5rem;}
+.chart-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.chart-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.25rem;gap:10px;}
+.chart-title{font-size:13px;font-weight:700;}
+.chart-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+.ptab{font-size:11px;font-weight:600;padding:4px 10px;border-radius:6px;cursor:pointer;color:var(--text3);background:transparent;border:none;font-family:'Encode Sans',sans-serif;transition:all .15s;}
+.ptab.active{background:var(--blue-bg2);color:var(--blue);}
+
+/* ── CARDS ── */
+.grid-auto{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:12px;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.1rem;position:relative;}
+.card.clickable{cursor:pointer;transition:all .15s;}
+.card.clickable:hover{border-color:var(--border3);background:var(--bg3);transform:translateY(-1px);}
+.c-top{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.av{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0;}
+.av-alpha{background:rgba(127,119,221,.2);color:#AFA9EC;}
+.av-beta{background:rgba(29,158,117,.2);color:#5DCAA5;}
+.av-delta{background:rgba(216,90,48,.2);color:#F0997B;}
+.av-gamma{background:rgba(212,83,126,.2);color:#ED93B1;}
+.av-blue{background:var(--blue-bg2);color:var(--blue);}
+.c-name{font-size:14px;font-weight:700;}
+.sq-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:4px;letter-spacing:.08em;display:inline-block;margin-top:3px;}
+.sq-alpha{background:var(--alpha-bg);color:var(--alpha);}
+.sq-beta{background:var(--beta-bg);color:var(--beta);}
+.sq-delta{background:var(--delta-bg);color:var(--delta);}
+.sq-gamma{background:var(--gamma-bg);color:var(--gamma);}
+.status-dot{position:absolute;top:12px;right:12px;width:8px;height:8px;border-radius:50%;}
+.sd-active{background:var(--green);}
+.sd-inactive{background:var(--text3);}
+.sd-suspended{background:var(--red);}
+.c-rows{display:flex;flex-direction:column;gap:7px;}
+.c-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;}
+.c-lbl{color:var(--text3);font-weight:500;}
+.c-val{color:var(--text);font-weight:600;}
+.pill{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.p-ok{background:var(--green-bg);color:var(--green);}
+.p-pending{background:var(--amber-bg);color:var(--amber);}
+.p-revision{background:var(--red-bg);color:var(--red);}
+.p-err{background:var(--red-bg);color:var(--red);}
+.p-none{background:var(--green-bg);color:var(--green);}
+.p-blue{background:var(--blue-bg);color:var(--blue);}
+.score-bar{height:3px;background:var(--border2);border-radius:2px;margin-top:10px;overflow:hidden;}
+.score-fill{height:100%;background:var(--blue);border-radius:2px;}
+.score-label{font-size:10px;color:var(--text3);margin-top:4px;display:flex;justify-content:space-between;}
+
+/* ── LEVEL BADGES ── */
+.lvl-neophyte{background:rgba(136,136,170,.15);color:#8888aa;font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.lvl-veteran{background:rgba(0,174,239,.15);color:var(--blue);font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.lvl-spartiate{background:rgba(245,197,24,.15);color:var(--gold);font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+
+/* ── LEADERBOARD ── */
+.lb-table{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1.25rem;}
+.lb-header{display:grid;grid-template-columns:48px 2fr 1fr 1fr 1fr 1fr 1fr;gap:0;background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text3);}
+.lb-row{display:grid;grid-template-columns:48px 2fr 1fr 1fr 1fr 1fr 1fr;gap:0;padding:12px 16px;border-bottom:1px solid var(--border);align-items:center;transition:background .1s;}
+.lb-row:last-child{border-bottom:none;}
+.lb-row:hover{background:var(--bg3);}
+.lb-rank{font-size:16px;font-weight:800;color:var(--text3);}
+.lb-rank.r1{color:var(--gold);}
+.lb-rank.r2{color:#C0C0C0;}
+.lb-rank.r3{color:#CD7F32;}
+.lb-name{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:700;}
+.lb-av{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+.lb-val{font-size:13px;font-weight:600;color:var(--text);}
+.lb-val.blue{color:var(--blue);}
+.lb-val.gold{color:var(--gold);}
+
+/* ── PAYMENT ── */
+.pay-table{background:var(--bg2);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:1.25rem;}
+.pay-header{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px;gap:0;background:var(--bg3);border-bottom:1px solid var(--border);padding:10px 16px;font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--text3);}
+.pay-row{display:grid;grid-template-columns:2fr 1fr 1fr 1fr 1fr 80px;gap:0;padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;align-items:center;transition:background .1s;}
+.pay-row:last-child{border-bottom:none;}
+.pay-row:hover{background:var(--bg3);}
+
+/* ── DETAIL ── */
+.detail-wrap{max-width:940px;}
+.back-btn{display:inline-flex;align-items:center;gap:8px;cursor:pointer;color:var(--text3);font-size:12px;font-weight:600;margin-bottom:1.5rem;transition:color .15s;}
+.back-btn:hover{color:var(--blue);}
+.detail-hero{display:grid;grid-template-columns:auto 1fr auto;gap:1.5rem;align-items:start;background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;}
+.d-av{width:64px;height:64px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0;}
+.d-name{font-size:22px;font-weight:800;margin-bottom:8px;}
+.d-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+.tag{font-size:10px;font-weight:700;padding:3px 9px;border-radius:4px;}
+.d-links{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+.link-btn{font-size:11px;font-weight:600;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--blue);cursor:pointer;font-family:'Encode Sans',sans-serif;transition:all .15s;text-decoration:none;display:inline-block;}
+.link-btn:hover{background:var(--blue-bg);}
+.perf-block{text-align:right;flex-shrink:0;}
+.perf-num{font-size:40px;font-weight:800;color:var(--blue);line-height:1;}
+.perf-lbl{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);}
+.detail-stats{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:1.25rem;}
+.ds{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+.ds-lbl{font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:6px;}
+.ds-val{font-size:18px;font-weight:800;}
+.editable{cursor:pointer;border-bottom:1px dashed var(--border3);transition:color .15s;}
+.editable:hover{color:var(--blue);}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem;}
+.info-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.25rem;}
+.info-card:last-child{margin-bottom:0;}
+.info-card-title{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:12px;}
+.info-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.info-row:last-child{border-bottom:none;}
+.info-key{color:var(--text3);font-weight:500;}
+.info-editable{color:var(--text);font-weight:600;cursor:pointer;padding:2px 6px;border-radius:4px;transition:background .15s;}
+.info-editable:hover{background:var(--bg4);color:var(--blue);}
+.status-btns{display:flex;gap:6px;flex-wrap:wrap;}
+.s-btn{font-size:11px;font-weight:700;padding:5px 14px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-family:'Encode Sans',sans-serif;transition:all .15s;}
+.s-btn:hover{color:var(--text);}
+.s-btn.sel-ok{background:var(--green-bg);color:var(--green);border-color:var(--green);}
+.s-btn.sel-pending{background:var(--amber-bg);color:var(--amber);border-color:var(--amber);}
+.s-btn.sel-revision{background:var(--red-bg);color:var(--red);border-color:var(--red);}
+.lvl-btns{display:flex;gap:6px;flex-wrap:wrap;}
+.lvl-btn{font-size:11px;font-weight:700;padding:5px 12px;border-radius:6px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-family:'Encode Sans',sans-serif;transition:all .15s;}
+.lvl-btn.active{background:var(--blue-bg2);color:var(--blue);border-color:var(--blue3);}
+.notes-ta{width:100%;background:transparent;border:none;outline:none;color:var(--text);font-family:'Encode Sans',sans-serif;font-size:13px;line-height:1.6;resize:none;min-height:80px;}
+
+/* ── NOTIFICATIONS ── */
+.notif-panel{position:fixed;top:56px;right:0;width:340px;max-height:calc(100vh - 56px);overflow-y:auto;background:var(--bg2);border-left:1px solid var(--border);z-index:400;padding:1rem;box-shadow:-4px 0 20px rgba(0,0,0,.4);}
+.notif-panel::-webkit-scrollbar{width:3px;}
+.notif-item{padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--bg3);margin-bottom:6px;}
+.notif-item.unread{border-left:3px solid var(--blue);}
+.notif-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.6;}}
+.nb-notif{animation:pulse 2s infinite;}
+
+/* ── OBJECTIVES ── */
+.obj-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px;}
+.obj-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.obj-name{font-size:14px;font-weight:700;}
+.obj-bar{height:6px;background:var(--border2);border-radius:3px;overflow:hidden;margin:8px 0;}
+.obj-fill{height:100%;border-radius:3px;background:var(--blue);transition:width .4s;}
+.obj-fill.success{background:var(--green);}
+.obj-fill.danger{background:var(--red);}
+.obj-meta{display:flex;justify-content:space-between;font-size:11px;color:var(--text3);}
+
+/* ── MISSIONS ── */
+.mc-id{font-size:10px;font-weight:700;font-family:monospace;color:var(--blue);margin-bottom:4px;}
+.mc-name{font-size:14px;font-weight:700;}
+.mc-status{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.ms-active{background:var(--green-bg);color:var(--green);}
+.ms-completed{background:var(--blue-bg);color:var(--blue);}
+.ms-paused{background:var(--amber-bg);color:var(--amber);}
+
+/* ── FILTERS ── */
+.filter-bar{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1rem;}
+.chip{font-size:11px;font-weight:600;padding:5px 12px;border-radius:20px;border:1px solid var(--border2);background:transparent;color:var(--text3);cursor:pointer;font-family:'Encode Sans',sans-serif;transition:all .15s;}
+.chip:hover{color:var(--text2);}
+.chip.active{background:var(--blue-bg2);color:var(--blue);border-color:var(--blue3);}
+.chip.ca.active{background:var(--alpha-bg);color:var(--alpha);border-color:var(--alpha);}
+.chip.cb.active{background:var(--beta-bg);color:var(--beta);border-color:var(--beta);}
+.chip.cd.active{background:var(--delta-bg);color:var(--delta);border-color:var(--delta);}
+.chip.cg.active{background:var(--gamma-bg);color:var(--gamma);border-color:var(--gamma);}
+
+/* ── SQUADS ── */
+.squad-bar{display:flex;align-items:center;gap:12px;padding:1rem 1.25rem;background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:1rem;flex-wrap:wrap;}
+.squad-stats-mini{display:flex;gap:1.5rem;margin-left:auto;}
+.ssm-val{font-size:14px;font-weight:800;}
+.ssm-lbl{font-size:10px;color:var(--text3);}
+
+/* ── CALENDAR ── */
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+.cal-header{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:8px;}
+.cal-day-name{text-align:center;font-size:10px;font-weight:700;color:var(--text3);padding:4px 0;}
+.cal-day{min-height:80px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:8px;cursor:pointer;transition:border-color .15s;}
+.cal-day:hover{border-color:var(--border3);}
+.cal-day.today{border-color:var(--blue);}
+.cal-day.other-month{opacity:.4;}
+.cal-day-num{font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px;}
+.cal-day.today .cal-day-num{color:var(--blue);}
+.cal-event{font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;margin-bottom:2px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+
+/* ── ALERTS ── */
+.alert-item{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:8px;margin-bottom:6px;background:var(--bg3);border:1px solid var(--border);border-left:3px solid transparent;}
+.alert-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.alert-text{font-size:13px;font-weight:600;flex:1;}
+.alert-sub{font-size:11px;color:var(--text3);margin-top:2px;}
+
+/* ── TEAM ── */
+.member-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.1rem;position:relative;}
+.role-badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;}
+.rb-admin{background:rgba(155,89,182,.2);color:#c39bd3;}
+.rb-gm{background:var(--blue-bg2);color:var(--blue);}
+.rb-alpha{background:var(--alpha-bg);color:var(--alpha);}
+.rb-beta{background:var(--beta-bg);color:var(--beta);}
+.rb-delta{background:var(--delta-bg);color:var(--delta);}
+.rb-gamma{background:var(--gamma-bg);color:var(--gamma);}
+.rb-clipper{background:var(--green-bg);color:var(--green);}
+.rb-prospect{background:var(--amber-bg);color:var(--amber);}
+.rb-client{background:var(--amber-bg);color:var(--amber);}
+.code-chip{font-size:10px;font-family:monospace;background:var(--bg3);padding:3px 8px;border-radius:4px;color:var(--text2);display:inline-block;margin-top:6px;}
+
+/* ── MODALS ── */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:500;align-items:center;justify-content:center;}
+.overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;padding:2rem;width:520px;max-width:96vw;max-height:90vh;overflow-y:auto;}
+.modal::-webkit-scrollbar{width:4px;}
+.modal::-webkit-scrollbar-thumb{background:var(--border3);border-radius:2px;}
+.modal-sm{width:380px;}
+.modal-title{font-size:17px;font-weight:800;margin-bottom:1.5rem;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:1.5rem;}
+.f-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.f-field{margin-bottom:14px;}
+.f-label{font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:6px;display:block;}
+.f-input,.f-select,.f-ta{width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;padding:9px 12px;color:var(--text);font-family:'Encode Sans',sans-serif;font-size:13px;font-weight:500;outline:none;transition:border-color .15s;}
+.f-input:focus,.f-select:focus,.f-ta:focus{border-color:var(--blue);}
+.f-select option{background:var(--bg3);}
+.f-ta{resize:vertical;min-height:80px;}
+.edit-box{background:var(--bg2);border:1px solid var(--blue);border-radius:12px;padding:1.5rem;width:340px;max-width:95vw;}
+
+/* ── TOP LIST ── */
+.top-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;}
+.top-card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;}
+.top-item{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);}
+.top-item:last-child{border-bottom:none;padding-bottom:0;}
+.top-rank{font-size:11px;font-weight:800;color:var(--text3);width:14px;text-align:center;flex-shrink:0;}
+.top-rank.gold{color:var(--gold);}
+.top-av{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;flex-shrink:0;}
+.top-name{font-size:13px;font-weight:600;}
+.top-meta{font-size:11px;color:var(--text3);margin-top:1px;}
+.top-val{margin-left:auto;font-size:13px;font-weight:800;color:var(--blue);flex-shrink:0;}
+
+/* ── PROSPECT/CLIENT ── */
+.prospect-screen{max-width:860px;margin:0 auto;}
+.prospect-hero{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center;margin-bottom:1.5rem;}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  .sidebar{display:none;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .charts-row,.detail-grid,.top-row{grid-template-columns:1fr;}
+  .detail-stats{grid-template-columns:repeat(3,1fr);}
+  .detail-hero{grid-template-columns:auto 1fr;}
+  .perf-block{display:none;}
+  .lb-header,.lb-row{grid-template-columns:40px 2fr 1fr 1fr;}
+  .lb-header span:nth-child(n+5),.lb-row>*:nth-child(n+5){display:none;}
+  .pay-header,.pay-row{grid-template-columns:2fr 1fr 1fr 60px;}
+  .pay-header span:nth-child(3),.pay-header span:nth-child(4),.pay-row>*:nth-child(3),.pay-row>*:nth-child(4){display:none;}
+}
+@media(max-width:480px){
+  .stats-row{grid-template-columns:1fr;}
+  .f-row{grid-template-columns:1fr;}
+  .content{padding:1rem;}
+  .detail-stats{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-logo">MERIDAS · CTM</div>
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Connexion à Firebase...</div>
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen" style="display:none;">
+  <div class="login-box">
+    <div class="login-logo">MERIDAS · CLIPPING TEAM MANAGEMENT</div>
+    <div class="login-title">Connexion</div>
+    <div class="login-sub">Entrez votre code d'accès</div>
+    <label class="l-label">CODE D'ACCÈS</label>
+    <input class="l-input" id="loginCode" type="password" placeholder="••••••••" autocomplete="off">
+    <div class="l-err" id="loginErr">Code incorrect.</div>
+    <button class="l-btn" onclick="doLogin()">Se connecter</button>
+    <hr class="l-divider">
+    <button class="l-btn-sec" onclick="toggleRegister()">Créer un compte équipe</button>
+    <div id="registerSection" style="display:none;margin-top:1rem;">
+      <div class="f-field"><label class="l-label">NOM</label><input class="l-input" id="regName" placeholder="Votre nom"></div>
+      <div class="f-field"><label class="l-label">RÔLE</label>
+        <select class="f-select" id="regRole" style="margin-bottom:14px;">
+          <option value="gm">Manager Général</option>
+          <option value="alpha">Manager Alpha</option>
+          <option value="beta">Manager Beta</option>
+          <option value="delta">Manager Delta</option>
+          <option value="gamma">Manager Gamma</option>
+        </select>
+      </div>
+      <div class="f-field"><label class="l-label">CODE ADMIN</label><input class="l-input" id="regAdmin" type="password" placeholder="Code administrateur requis"></div>
+      <button class="l-btn" onclick="doRegister()">Créer le compte</button>
+      <div class="l-err" id="regErr">Code admin incorrect.</div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="appRoot" style="display:none;">
+<div class="sidebar" id="sidebar">
+  <div class="s-logo">
+    <div class="s-logo-text">MERIDAS · CLIPPING<br>TEAM MANAGEMENT</div>
+    <div class="s-logo-sub">INTERNAL DASHBOARD</div>
+  </div>
+  <div id="sidebarNav"></div>
+  <div class="s-user" id="sidebarUser"></div>
+</div>
+<div class="main" id="mainArea">
+  <div class="topbar">
+    <span class="tb-title" id="tbTitle">Vue globale</span>
+    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+      <div id="tbRight"></div>
+      <div id="notifBellWrap" style="display:none;position:relative;">
+        <button class="btn" onclick="toggleNotifPanel()" style="padding:7px 10px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="s-badge nb-red nb-notif" id="notifCount" style="position:absolute;top:-4px;right:-4px;display:none;min-width:18px;text-align:center;">0</span>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="content" id="mainContent"></div>
+</div>
+</div>
+
+<!-- MODALS -->
+<div class="overlay" id="clipperModal">
+  <div class="modal">
+    <div class="modal-title">Nouveau clipper</div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">NOM</label><input class="f-input" id="fn-name" placeholder="Ex: Axel K."></div>
+      <div class="f-field"><label class="f-label">INITIALES</label><input class="f-input" id="fn-init" placeholder="AK" maxlength="2"></div>
+    </div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">ESCOUADE</label>
+        <select class="f-select" id="fn-squad"><option value="alpha">Alpha</option><option value="beta">Beta</option><option value="delta">Delta</option><option value="gamma">Gamma</option></select>
+      </div>
+      <div class="f-field"><label class="f-label">NIVEAU</label>
+        <select class="f-select" id="fn-level">
+          <option value="neophyte">Clipper Néophyte</option>
+          <option value="veteran">Clipper Vétéran</option>
+          <option value="spartiate">Clipper Spartiate</option>
+        </select>
+      </div>
+    </div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">STATUT</label>
+        <select class="f-select" id="fn-status"><option value="active">Actif</option><option value="inactive">Inactif</option><option value="suspended">Suspendu</option></select>
+      </div>
+      <div class="f-field"><label class="f-label">RECRUTÉ LE</label><input class="f-input" id="fn-recruited" placeholder="01 avr 2025"></div>
+    </div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">DISCORD</label><input class="f-input" id="fn-discord" placeholder="@username"></div>
+      <div class="f-field"><label class="f-label">TIKTOK</label><input class="f-input" id="fn-tiktok" placeholder="@tiktok"></div>
+    </div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">INSTAGRAM</label><input class="f-input" id="fn-ig" placeholder="@instagram"></div>
+      <div class="f-field"><label class="f-label">YOUTUBE</label><input class="f-input" id="fn-yt" placeholder="@youtube"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('clipperModal')">Annuler</button><button class="btn btn-blue" onclick="addClipper()">Ajouter</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="missionModal">
+  <div class="modal">
+    <div class="modal-title">Nouvelle mission</div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">ID MISSION</label><input class="f-input" id="fm-id" placeholder="Ex: MRK-050"></div>
+      <div class="f-field"><label class="f-label">NOM CLIENT / CRÉATEUR</label><input class="f-input" id="fm-name" placeholder="Ex: Yohan B."></div>
+    </div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">STATUT</label>
+        <select class="f-select" id="fm-status"><option value="active">Active</option><option value="paused">En pause</option><option value="completed">Terminée</option></select>
+      </div>
+      <div class="f-field"><label class="f-label">ESCOUADE</label>
+        <select class="f-select" id="fm-squad"><option value="all">Toutes</option><option value="alpha">Alpha</option><option value="beta">Beta</option><option value="delta">Delta</option><option value="gamma">Gamma</option></select>
+      </div>
+    </div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">CLIPS DEMANDÉS</label><input class="f-input" id="fm-clips" type="number" placeholder="10"></div>
+      <div class="f-field"><label class="f-label">OBJECTIF VUES</label><input class="f-input" id="fm-views" placeholder="500k"></div>
+    </div>
+    <div class="f-field"><label class="f-label">DESCRIPTION / BRIEF</label><textarea class="f-ta" id="fm-desc" placeholder="Objectifs, style, consignes..."></textarea></div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">LIEN RESSOURCES</label><input class="f-input" id="fm-link" placeholder="https://..."></div>
+      <div class="f-field"><label class="f-label">TAGS (virgule)</label><input class="f-input" id="fm-tags" placeholder="tiktok, hook fort"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('missionModal')">Annuler</button><button class="btn btn-blue" onclick="addMission()">Créer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="memberModal">
+  <div class="modal modal-sm">
+    <div class="modal-title">Ajouter un membre</div>
+    <div class="f-field"><label class="f-label">NOM</label><input class="f-input" id="mm-name" placeholder="Ex: Thomas L."></div>
+    <div class="f-field"><label class="f-label">RÔLE</label>
+      <select class="f-select" id="mm-role">
+        <option value="gm">Manager Général</option>
+        <option value="alpha">Manager Alpha</option><option value="beta">Manager Beta</option>
+        <option value="delta">Manager Delta</option><option value="gamma">Manager Gamma</option>
+        <option value="prospect">Prospect Client</option><option value="client">Client (contrat)</option>
+      </select>
+    </div>
+    <div class="f-field"><label class="f-label">CODE D'ACCÈS</label><input class="f-input" id="mm-code" placeholder="Min. 4 caractères" autocomplete="off"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('memberModal')">Annuler</button><button class="btn btn-blue" onclick="addMember()">Créer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="payModal">
+  <div class="modal modal-sm">
+    <div class="modal-title">Créer une fiche de paie</div>
+    <div class="f-field"><label class="f-label">1. CLIPPER</label>
+      <select class="f-select" id="pay-clipper"></select>
+    </div>
+    <div class="f-field"><label class="f-label">2. MONTANT (€)</label><input class="f-input" id="pay-amount" type="number" placeholder="Ex: 120"></div>
+    <div class="f-field"><label class="f-label">3. RAISON</label><input class="f-input" id="pay-reason" placeholder="Ex: Mission MRK-042, Bonus qualité..."></div>
+    <div class="f-field"><label class="f-label">4. DATE</label><input class="f-input" id="pay-date" type="date"></div>
+    <div class="f-field"><label class="f-label">5. STATUT</label>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button class="s-btn" id="pay-status-pending" onclick="selectPayStatus('pending')" style="flex:1;justify-content:center;">En attente</button>
+        <button class="s-btn" id="pay-status-paid" onclick="selectPayStatus('paid')" style="flex:1;justify-content:center;">Payé</button>
+      </div>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('payModal')">Annuler</button><button class="btn btn-blue" onclick="confirmPayment()">Enregistrer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="objModal">
+  <div class="modal modal-sm">
+    <div class="modal-title">Nouvel objectif</div>
+    <div class="f-field"><label class="f-label">NOM</label><input class="f-input" id="fo-name" placeholder="Ex: 1M vues cette semaine"></div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">TYPE</label>
+        <select class="f-select" id="fo-type">
+          <option value="viewsWeek">Vues (semaine)</option><option value="viewsMonth">Vues (mois)</option>
+          <option value="viewsTotal">Vues (total)</option><option value="clips">Clips</option>
+          <option value="validation">Taux validation (%)</option>
+        </select>
+      </div>
+      <div class="f-field"><label class="f-label">CIBLE</label><input class="f-input" id="fo-target" type="number" placeholder="1000000"></div>
+    </div>
+    <div class="f-field"><label class="f-label">PÉRIODE</label>
+      <select class="f-select" id="fo-period"><option value="week">Cette semaine</option><option value="month">Ce mois</option><option value="total">Total</option></select>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('objModal')">Annuler</button><button class="btn btn-blue" onclick="addObjective()">Créer</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="sqObjModal">
+  <div class="modal modal-sm">
+    <div class="modal-title">Objectif — <span id="sqo-label">Escouade</span></div>
+    <div class="f-field"><label class="f-label">NOM</label><input class="f-input" id="sqo-name" placeholder="Ex: 500k vues cette semaine"></div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">TYPE</label>
+        <select class="f-select" id="sqo-type">
+          <option value="viewsWeek">Vues (semaine)</option><option value="viewsMonth">Vues (mois)</option>
+          <option value="viewsTotal">Vues (total)</option><option value="clips">Clips</option>
+          <option value="validation">Taux validation (%)</option>
+        </select>
+      </div>
+      <div class="f-field"><label class="f-label">CIBLE</label><input class="f-input" id="sqo-target" type="number" placeholder="500000"></div>
+    </div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('sqObjModal')">Annuler</button><button class="btn btn-blue" onclick="confirmSqObj()">Ajouter</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="addTaskModal">
+  <div class="modal modal-sm">
+    <div class="modal-title">Ajouter une tâche</div>
+    <div class="f-field"><label class="f-label">TITRE</label><input class="f-input" id="at-title" placeholder="Ex: Review clips Axel K."></div>
+    <div class="f-row">
+      <div class="f-field"><label class="f-label">DATE</label><input class="f-input" id="at-date" type="date"></div>
+      <div class="f-field"><label class="f-label">ESCOUADE</label>
+        <select class="f-select" id="at-squad"><option value="all">Toutes</option><option value="alpha">Alpha</option><option value="beta">Beta</option><option value="delta">Delta</option><option value="gamma">Gamma</option></select>
+      </div>
+    </div>
+    <div class="f-field"><label class="f-label">CLIPPER CONCERNÉ</label><select class="f-select" id="at-clipper"></select></div>
+    <div class="f-field"><label class="f-label">NOTE</label><input class="f-input" id="at-note" placeholder="Informations supplémentaires..."></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal('addTaskModal')">Annuler</button><button class="btn btn-blue" onclick="confirmAddTask()">Ajouter</button></div>
+  </div>
+</div>
+
+<div class="overlay" id="editOverlay">
+  <div class="edit-box">
+    <div style="font-size:12px;font-weight:700;color:var(--text3);margin-bottom:10px;" id="editTitle">Modifier</div>
+    <input class="f-input" id="editInput" style="width:100%;margin-bottom:0;">
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn" onclick="cancelEdit()" style="flex:1;">Annuler</button>
+      <button class="btn btn-blue" onclick="confirmEdit()" style="flex:1;">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- FIREBASE -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, updateDoc, deleteDoc, onSnapshot, addDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAUVTE8vdu5s1sezwlOV19TDV87G36aps8",
+  authDomain: "meridas-internal-dashboard.firebaseapp.com",
+  projectId: "meridas-internal-dashboard",
+  storageBucket: "meridas-internal-dashboard.firebasestorage.app",
+  messagingSenderId: "238937533010",
+  appId: "1:238937533010:web:1aee636e78f71858350d8b"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ── CONSTANTS ──
+const ADMIN_CODE = 'admin-ctm-9x2';
+const sqMeta = {
+  alpha:{color:'#7F77DD',cls:'sq-alpha',av:'av-alpha',rb:'rb-alpha'},
+  beta:{color:'#1D9E75',cls:'sq-beta',av:'av-beta',rb:'rb-beta'},
+  delta:{color:'#D85A30',cls:'sq-delta',av:'av-delta',rb:'rb-delta'},
+  gamma:{color:'#D4537E',cls:'sq-gamma',av:'av-gamma',rb:'rb-gamma'}
+};
+const roleMeta = {
+  admin:{label:'Administrateur',badge:'rb-admin',canAll:true,isAdmin:true},
+  gm:{label:'Manager Général',badge:'rb-gm',canAll:true},
+  alpha:{label:'Manager Alpha',badge:'rb-alpha',squad:'alpha'},
+  beta:{label:'Manager Beta',badge:'rb-beta',squad:'beta'},
+  delta:{label:'Manager Delta',badge:'rb-delta',squad:'delta'},
+  gamma:{label:'Manager Gamma',badge:'rb-gamma',squad:'gamma'},
+  clipper:{label:'Clipper',badge:'rb-clipper',isClipper:true},
+  prospect:{label:'Prospect',badge:'rb-prospect',isProspect:true},
+  client:{label:'Client',badge:'rb-client',isClient:true}
+};
+const lvlMeta = {
+  neophyte:{label:'Néophyte',cls:'lvl-neophyte',rank:1},
+  veteran:{label:'Vétéran',cls:'lvl-veteran',rank:2},
+  spartiate:{label:'Spartiate',cls:'lvl-spartiate',rank:3}
+};
+const stMeta = {active:{color:'var(--green)',label:'Actif'},inactive:{color:'var(--text3)',label:'Inactif'},suspended:{color:'var(--red)',label:'Suspendu'}};
+
+// ── STATE ──
+let currentUser = null;
+let currentPage = 'overview';
+let detailId = null;
+let activeFilter = 'all';
+let activeMissionFilter = 'all';
+let chartInstances = [];
+let notifPanelOpen = false;
+let _editId, _editField, _editNum, _sqForObj, _payStatus = 'pending';
+
+// ── LIVE DATA ──
+let DATA = {clippers:{}, missions:{}, team:{}, objectives:{}, payments:{}, tasks:{}, notifications:{}, squadObjectives:{alpha:{},beta:{},delta:{},gamma:{}}};
+let unsubscribers = [];
+
+async function initFirebase() {
+  // Set up admin account if not exists
+  const adminRef = doc(db, 'team', 'admin-paul');
+  const adminSnap = await getDoc(adminRef);
+  if (!adminSnap.exists()) {
+    await setDoc(adminRef, {id:'admin-paul', name:'Paul', role:'admin', code:ADMIN_CODE, initials:'PA', createdAt: Date.now()});
+  }
+  document.getElementById('loadingScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function subscribeAll() {
+  const cols = ['clippers','missions','team','objectives','payments','tasks','notifications'];
+  cols.forEach(col => {
+    const unsub = onSnapshot(collection(db, col), snap => {
+      DATA[col] = {};
+      snap.forEach(d => { DATA[col][d.id] = {id: d.id, ...d.data()}; });
+      if (currentPage) { renderContent(); updateBadges(); }
+    });
+    unsubscribers.push(unsub);
+  });
+  // Squad objectives
+  ['alpha','beta','delta','gamma'].forEach(sq => {
+    const unsub = onSnapshot(collection(db, 'squadObjectives_'+sq), snap => {
+      DATA.squadObjectives[sq] = {};
+      snap.forEach(d => { DATA.squadObjectives[sq][d.id] = {id: d.id, ...d.data()}; });
+      if (currentPage) renderContent();
+    });
+    unsubscribers.push(unsub);
+  });
+}
+
+// ── HELPERS ──
+function clippers() { return Object.values(DATA.clippers); }
+function missions() { return Object.values(DATA.missions); }
+function team() { return Object.values(DATA.team); }
+function objectives() { return Object.values(DATA.objectives); }
+function payments() { return Object.values(DATA.payments); }
+function tasks() { return Object.values(DATA.tasks); }
+function notifications() { return Object.values(DATA.notifications).sort((a,b) => (b.time||0)-(a.time||0)); }
+
+function clippersVisible() {
+  const cl = clippers();
+  if (!currentUser) return [];
+  if (currentUser.role === 'admin' || currentUser.role === 'gm') return cl;
+  if (currentUser.role === 'clipper') return cl.filter(c => c.id === currentUser.clipperId);
+  if (currentUser.role === 'prospect' || currentUser.role === 'client') return cl.filter(c => c.status === 'active');
+  const rm = roleMeta[currentUser.role];
+  if (rm && rm.squad) return cl.filter(c => c.squad === rm.squad);
+  return [];
+}
+function isManager() { return currentUser && (currentUser.role === 'admin' || currentUser.role === 'gm' || ['alpha','beta','delta','gamma'].includes(currentUser.role)); }
+function isAdminOrGM() { return currentUser && (currentUser.role === 'admin' || currentUser.role === 'gm'); }
+function canEdit(clipper) {
+  if (!currentUser) return false;
+  if (currentUser.role === 'admin' || currentUser.role === 'gm') return true;
+  const rm = roleMeta[currentUser.role];
+  return rm && rm.squad === clipper.squad;
+}
+function fmt(n) { if (!n) return '0'; if (n >= 1e6) return (n/1e6).toFixed(1)+'M'; if (n >= 1000) return Math.round(n/1000)+'k'; return String(Math.round(n)); }
+function score(c) { return Math.round((c.validation||0)*.5 + (Math.min(c.viewsTotal||0,5e6)/5e6)*30 + Math.min(c.clips||0,30)/30*20); }
+function rvLabel(r) { return r==='ok'?'Validé':r==='revision'?'Révision':'En attente'; }
+function rvPill(r) { return r==='ok'?'p-ok':r==='revision'?'p-revision':'p-pending'; }
+function missionName(mId) { if (!mId) return 'Non assignée'; const m = DATA.missions[mId]; return m ? m.missionId+' — '+m.name : 'Non assignée'; }
+function lvlBadge(level) { const l = lvlMeta[level] || lvlMeta.neophyte; return `<span class="${l.cls}">${l.label}</span>`; }
+function genCode(prefix) { return prefix + Math.random().toString(36).slice(2,8); }
+function nowMs() { return Date.now(); }
+function dateStr() { return new Date().toLocaleDateString('fr-FR'); }
+
+// ── AUTH ──
+async function doLogin() {
+  const code = document.getElementById('loginCode').value.trim();
+  const teamMembers = team();
+  let user = teamMembers.find(u => u.code === code);
+  if (!user) {
+    const clipper = clippers().find(c => c.clipperCode === code);
+    if (clipper) user = {id:'clipper_'+clipper.id, name:clipper.name, role:'clipper', code, initials:clipper.initials, clipperId:clipper.id};
+  }
+  if (!user) { document.getElementById('loginErr').style.display = 'block'; return; }
+  currentUser = user;
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appRoot').style.display = 'flex';
+  buildSidebar();
+  navTo(getDefaultPage());
+  if (isManager()) renderNotifBell();
+}
+
+function doLogout() {
+  currentUser = null;
+  document.getElementById('appRoot').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('loginCode').value = '';
+  document.getElementById('loginErr').style.display = 'none';
+}
+
+async function doRegister() {
+  const adminCode = document.getElementById('regAdmin').value.trim();
+  const ok = adminCode === ADMIN_CODE || team().find(u => u.code === adminCode && (u.role === 'admin' || u.role === 'gm'));
+  if (!ok) { document.getElementById('regErr').style.display = 'block'; return; }
+  const name = document.getElementById('regName').value.trim();
+  const role = document.getElementById('regRole').value;
+  if (!name) { alert('Nom requis.'); return; }
+  const code = genCode('ctm_');
+  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const ref = doc(collection(db, 'team'));
+  await setDoc(ref, {id:ref.id, name, role, code, initials, createdAt: nowMs()});
+  alert(`Compte créé !\nCode d'accès : ${code}\nCommuniquez ce code à ${name}.`);
+  document.getElementById('registerSection').style.display = 'none';
+  ['regName','regAdmin'].forEach(id => document.getElementById(id).value = '');
+}
+
+function toggleRegister() {
+  const s = document.getElementById('registerSection');
+  s.style.display = s.style.display === 'none' ? 'block' : 'none';
+}
+
+function getDefaultPage() {
+  if (!currentUser) return 'overview';
+  if (currentUser.role === 'clipper') return 'myStats';
+  if (currentUser.role === 'prospect') return 'prospectView';
+  if (currentUser.role === 'client') return 'clientDash';
+  return 'overview';
+}
+
+// ── SIDEBAR ──
+function buildSidebar() {
+  const rm = roleMeta[currentUser.role] || {};
+  const isClipper = currentUser.role === 'clipper';
+  const isProspect = currentUser.role === 'prospect';
+  const isClient = currentUser.role === 'client';
+  let nav = '';
+  const si = (page, label, icon, badge='') => `<div class="s-item" id="nav-${page}" onclick="navTo('${page}')">${icon}${label}${badge}</div>`;
+  const ic = {
+    grid:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>`,
+    users:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0-3-3.85"/></svg>`,
+    squad:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>`,
+    mission:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+    chart:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+    target:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>`,
+    cal:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`,
+    pay:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+    shield:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+    bell:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`,
+    lb:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="18 20 18 10"/><polyline points="12 20 12 4"/><polyline points="6 20 6 14"/></svg>`
+  };
+  if (!isClipper && !isProspect && !isClient) {
+    nav += `<div class="s-section">PRINCIPAL</div>`;
+    nav += si('overview','Vue globale',ic.grid);
+    nav += si('clippers','Clippers',ic.users,`<span class="s-badge nb-blue" id="sClipCount">${clippers().length}</span>`);
+    nav += si('squads','Escouades',ic.squad);
+    nav += si('missions','Missions',ic.mission,`<span class="s-badge nb-green" id="sMissionCount">${missions().filter(m=>m.status==='active').length}</span>`);
+    nav += si('leaderboard','Leaderboard',ic.lb);
+    nav += `<div class="s-section">ANALYTIQUE</div>`;
+    nav += si('analytics','Analytics',ic.chart);
+    nav += si('objectives','Objectifs',ic.target);
+    nav += si('calendar','Calendrier',ic.cal);
+    if (isAdminOrGM()) {
+      nav += `<div class="s-section">GESTION</div>`;
+      nav += si('payments','Paiements',ic.pay,`<span class="s-badge nb-red" id="sPayCount"></span>`);
+      nav += si('team','Mon équipe',ic.shield);
+    }
+    nav += si('alerts','Alertes',ic.bell,`<span class="s-badge nb-red" id="sAlertCount" style="display:none;"></span>`);
+  } else if (isClipper) {
+    nav += si('myStats','Mes stats',ic.chart);
+    nav += si('leaderboard','Leaderboard',ic.lb);
+  } else if (isProspect) {
+    nav += si('prospectView','Statistiques équipe',ic.chart);
+  } else if (isClient) {
+    nav += si('clientDash','Mon Dashboard',ic.grid);
+    nav += si('prospectView','Statistiques équipe',ic.chart);
+  }
+  document.getElementById('sidebarNav').innerHTML = nav;
+  document.getElementById('sidebarUser').innerHTML = `
+    <div class="s-user-info">
+      <div class="s-av">${currentUser.initials||currentUser.name[0]}</div>
+      <div><div style="font-size:12px;font-weight:700;">${currentUser.name}</div><div style="font-size:10px;color:var(--text3);">${roleMeta[currentUser.role]?.label||currentUser.role}</div></div>
+    </div>
+    <div style="display:flex;gap:6px;">
+      ${!isClipper&&!isProspect&&!isClient?`<button class="btn" style="flex:1;justify-content:center;font-size:11px;" onclick="doCapture()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:13px;height:13px;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Capturer</button>`:''}
+      <button class="btn" style="font-size:11px;" onclick="doLogout()" title="Déconnexion"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></button>
+    </div>`;
+  updateBadges();
+}
+
+// ── NAVIGATION ──
+function navTo(page) {
+  currentPage = page; detailId = null; activeFilter = 'all'; activeMissionFilter = 'all';
+  document.querySelectorAll('.s-item').forEach(n => n.classList.remove('active'));
+  const el = document.getElementById('nav-'+page); if (el) el.classList.add('active');
+  const titles = {overview:'Vue globale',clippers:'Clippers',squads:'Escouades',missions:'Missions',leaderboard:'Leaderboard',analytics:'Analytics',objectives:'Objectifs',calendar:'Calendrier',payments:'Paiements',team:'Mon équipe',alerts:'Alertes',myStats:'Mes statistiques',prospectView:'Statistiques équipe',clientDash:'Mon Dashboard'};
+  document.getElementById('tbTitle').textContent = titles[page] || page;
+  destroyCharts(); buildTopbarRight(); renderContent(); updateBadges();
+}
+
+function buildTopbarRight() {
+  const el = document.getElementById('tbRight'); if (!el) return;
+  const btns = [];
+  if (currentPage==='clippers'&&isManager()) btns.push(`<button class="btn btn-blue" onclick="openClipper()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>Ajouter clipper</button>`);
+  if (currentPage==='missions'&&isManager()) btns.push(`<button class="btn btn-blue" onclick="openMission()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>Nouvelle mission</button>`);
+  if (currentPage==='team'&&isAdminOrGM()) btns.push(`<button class="btn btn-blue" onclick="openModal('memberModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>Ajouter membre</button>`);
+  if (currentPage==='objectives'&&isAdminOrGM()) btns.push(`<button class="btn btn-blue" onclick="openModal('objModal')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>Ajouter objectif</button>`);
+  if (currentPage==='payments'&&isAdminOrGM()) btns.push(`<button class="btn btn-blue" onclick="openPayModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:13px;height:13px;"><path d="M12 5v14M5 12h14"/></svg>Créer fiche de paie</button>`);
+  el.innerHTML = btns.join('');
+}
+
+function updateBadges() {
+  const sc = document.getElementById('sClipCount'); if (sc) sc.textContent = clippers().length;
+  const sm = document.getElementById('sMissionCount'); if (sm) sm.textContent = missions().filter(m=>m.status==='active').length;
+  const due = payments().filter(p=>p.status==='pending').length;
+  const sp = document.getElementById('sPayCount'); if (sp) { sp.textContent = due; sp.style.display = due ? '' : 'none'; }
+  const ac = clippers().filter(c=>c.errors||c.review==='revision').length;
+  const sa = document.getElementById('sAlertCount'); if (sa) { sa.textContent = ac; sa.style.display = ac ? '' : 'none'; }
+  renderNotifBell();
+}
+
+function destroyCharts() { chartInstances.forEach(c => { try { c.destroy(); } catch(e){} }); chartInstances = []; }
+
+// ── RENDER ──
+function renderContent() {
+  const el = document.getElementById('mainContent'); if (!el) return;
+  const pages = {overview:buildOverview, clippers:buildClippers, squads:buildSquads, missions:buildMissions, leaderboard:buildLeaderboard, analytics:buildAnalytics, objectives:buildObjectives, calendar:buildCalendar, payments:buildPayments, team:buildTeam, alerts:buildAlerts, myStats:buildMyStats, prospectView:buildProspectView, clientDash:buildClientDash, detail:buildDetail, missionDetail:buildMissionDetail, calDay:buildCalDay};
+  el.innerHTML = (pages[currentPage]||buildOverview)();
+  if (currentPage==='overview') setTimeout(initOverviewCharts, 50);
+  if (currentPage==='analytics') setTimeout(initAnalyticsCharts, 50);
+}
+
+// ── CLIPPER CARD ──
+function buildClipperCard(c, clickable=true) {
+  const sm = sqMeta[c.squad]||sqMeta.alpha;
+  const lv = lvlMeta[c.level]||lvlMeta.neophyte;
+  const totalPaidOut = payments().filter(p=>p.clipperId===c.id&&p.status==='paid').reduce((s,p)=>s+(p.amount||0),0);
+  const campaigns = (c.missions||[]).length + (missions().filter(m=>clippers().filter(cl=>cl.missionId===m.id).some(cl=>cl.id===c.id)).length);
+  return `<div class="card${clickable?' clickable':''}" ${clickable?`onclick="goDetail('${c.id}')"`:''}>
+  <div class="status-dot sd-${c.status||'active'}"></div>
+  <div class="c-top"><div class="av ${sm.av}">${c.initials||'?'}</div>
+    <div><div class="c-name">${c.name}</div><span class="sq-badge ${sm.cls}">${(c.squad||'').toUpperCase()}</span></div>
+  </div>
+  <div class="c-rows">
+    <div class="c-row"><span class="c-lbl">Niveau</span>${lvlBadge(c.level)}</div>
+    <div class="c-row"><span class="c-lbl">Mission</span><span class="c-val" style="font-size:11px;max-width:130px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">${missionName(c.missionId)}</span></div>
+    <div class="c-row"><span class="c-lbl">Review</span><span class="pill ${rvPill(c.review)}">${rvLabel(c.review)}</span></div>
+    <div class="c-row"><span class="c-lbl">Clips</span><span class="c-val">${c.clips||0}</span></div>
+    <div class="c-row"><span class="c-lbl">Vues sem.</span><span class="c-val">${fmt(c.viewsWeek)}</span></div>
+    <div class="c-row"><span class="c-lbl">Vues total</span><span class="c-val">${fmt(c.viewsTotal)}</span></div>
+    <div class="c-row"><span class="c-lbl">Valid.</span><span class="c-val">${c.validation||0}%</span></div>
+    <div class="c-row"><span class="c-lbl">Total payé</span><span class="c-val" style="color:var(--green);">${totalPaidOut}€</span></div>
+    ${c.errors?'<div class="c-row"><span class="pill p-err" style="font-size:11px;">Erreur signalée</span></div>':''}
+  </div>
+  <div class="score-bar"><div class="score-fill" style="width:${score(c)}%;"></div></div>
+  <div class="score-label"><span>Score</span><span>${score(c)}/100</span></div>
+</div>`;
+}
+
+// ── OVERVIEW ──
+function buildOverview() {
+  const cl = clippersVisible();
+  const totalViews = cl.reduce((s,c)=>s+(c.viewsTotal||0),0);
+  const weekViews = cl.reduce((s,c)=>s+(c.viewsWeek||0),0);
+  const totalClips = cl.reduce((s,c)=>s+(c.clips||0),0);
+  const totalPay = payments().filter(p=>p.status==='pending').reduce((s,p)=>s+(p.amount||0),0);
+  const totalPaid = payments().filter(p=>p.status==='paid').reduce((s,p)=>s+(p.amount||0),0);
+  const avgVal = cl.length ? Math.round(cl.reduce((s,c)=>s+(c.validation||0),0)/cl.length) : 0;
+  const sorted = [...cl].sort((a,b)=>(b.viewsTotal||0)-(a.viewsTotal||0)).slice(0,3);
+  const topPerf = [...cl].sort((a,b)=>score(b)-score(a)).slice(0,3);
+  const alerts = cl.filter(c=>c.errors||c.review==='revision');
+  return `
+<div class="stats-row">
+  <div class="stat-card accent"><div class="stat-lbl">VUES TOTALES</div><div class="stat-val">${fmt(totalViews)}</div><div class="stat-sub">${fmt(weekViews)} cette semaine</div></div>
+  <div class="stat-card"><div class="stat-lbl">CLIPS FOURNIS</div><div class="stat-val">${totalClips}</div><div class="stat-sub">${cl.length} clippers</div></div>
+  <div class="stat-card"><div class="stat-lbl">PAIEMENTS EN ATTENTE</div><div class="stat-val" style="color:var(--amber);">${totalPay}€</div><div class="stat-sub">${payments().filter(p=>p.status==='pending').length} fiches</div></div>
+  <div class="stat-card"><div class="stat-lbl">TOTAL PAYOUT</div><div class="stat-val" style="color:var(--green);">${totalPaid}€</div><div class="stat-sub">versé depuis le début</div></div>
+</div>
+<div class="charts-row">
+  <div class="chart-card">
+    <div class="chart-header">
+      <div><div class="chart-title">Vues par clipper</div><div class="chart-sub">Performance team</div></div>
+      <div style="display:flex;gap:4px;">
+        <button class="ptab active" onclick="switchPeriod('viewsWeek',this)">Semaine</button>
+        <button class="ptab" onclick="switchPeriod('viewsMonth',this)">Mois</button>
+        <button class="ptab" onclick="switchPeriod('viewsTotal',this)">Total</button>
+      </div>
+    </div>
+    <canvas id="viewsChart" height="110"></canvas>
+  </div>
+  <div class="chart-card">
+    <div class="chart-header"><div><div class="chart-title">Clips par escouade</div></div></div>
+    <canvas id="squadChart" height="150"></canvas>
+  </div>
+</div>
+<div class="top-row">
+  <div class="top-card">
+    <div class="chart-header" style="margin-bottom:.75rem;"><div class="chart-title">Top vues</div></div>
+    ${sorted.length ? sorted.map((c,i)=>`<div class="top-item">
+      <div class="top-rank${i===0?' gold':''}">${i+1}</div>
+      <div class="top-av ${sqMeta[c.squad]?.av||'av-alpha'}">${c.initials||'?'}</div>
+      <div style="flex:1;"><div class="top-name">${c.name}</div><div class="top-meta"><span class="sq-badge ${sqMeta[c.squad]?.cls||'sq-alpha'}">${(c.squad||'').toUpperCase()}</span></div></div>
+      <div class="top-val">${fmt(c.viewsTotal)}</div>
+    </div>`).join('') : '<div style="color:var(--text3);font-size:12px;padding:.5rem 0;">Aucun clipper.</div>'}
+  </div>
+  <div class="top-card">
+    <div class="chart-header" style="margin-bottom:.75rem;"><div class="chart-title">Top performance</div></div>
+    ${topPerf.length ? topPerf.map((c,i)=>`<div class="top-item">
+      <div class="top-rank${i===0?' gold':''}">${i+1}</div>
+      <div class="top-av ${sqMeta[c.squad]?.av||'av-alpha'}">${c.initials||'?'}</div>
+      <div style="flex:1;"><div class="top-name">${c.name}</div><div class="top-meta">Score ${score(c)}/100</div></div>
+      <div class="top-val">${c.validation||0}%</div>
+    </div>`).join('') : '<div style="color:var(--text3);font-size:12px;padding:.5rem 0;">Aucun clipper.</div>'}
+  </div>
+</div>
+${alerts.length ? `<div class="chart-card"><div class="chart-header" style="margin-bottom:.75rem;"><div class="chart-title">Alertes actives</div></div>${alerts.map(c=>`<div class="alert-item" style="border-left-color:var(--red);"><div class="alert-dot" style="background:var(--red);"></div><div style="flex:1;"><div class="alert-text">${c.errors?'Erreur signalée':'Révision en attente'} — ${c.name}</div></div><span style="font-size:10px;font-weight:700;color:var(--red);background:var(--red-bg);padding:2px 8px;border-radius:4px;">URGENT</span></div>`).join('')}</div>` : ''}`;
+}
+
+function initOverviewCharts() {
+  const cl = clippersVisible();
+  const ctx1 = document.getElementById('viewsChart');
+  const ctx2 = document.getElementById('squadChart');
+  if (!ctx1 || !ctx2 || !cl.length) return;
+  const ch1 = new Chart(ctx1, {type:'bar',data:{labels:cl.map(c=>c.name?.split(' ')[0]||'?'),datasets:[{data:cl.map(c=>c.viewsWeek||0),backgroundColor:'rgba(0,174,239,.7)',borderColor:'#00aeef',borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>' '+fmt(v.raw)+' vues'}}},scales:{x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11},callback:v=>fmt(v)}}}}});
+  chartInstances.push(ch1);
+  const squads = ['alpha','beta','delta','gamma'];
+  const ch2 = new Chart(ctx2, {type:'doughnut',data:{labels:squads.map(s=>s[0].toUpperCase()+s.slice(1)),datasets:[{data:squads.map(sq=>clippers().filter(c=>c.squad===sq).reduce((s,c)=>s+(c.clips||0),0)),backgroundColor:['rgba(127,119,221,.8)','rgba(29,158,117,.8)','rgba(216,90,48,.8)','rgba(212,83,126,.8)'],borderWidth:0}]},options:{responsive:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{color:'#8888aa',font:{family:'Encode Sans',size:11},padding:10,boxWidth:10}}}}});
+  chartInstances.push(ch2);
+}
+
+window.switchPeriod = function(field, el) {
+  document.querySelectorAll('.ptab').forEach(t=>t.classList.remove('active')); el.classList.add('active');
+  const cl = clippersVisible();
+  const ctx = document.getElementById('viewsChart'); if (!ctx) return;
+  const old = chartInstances.find(c=>c.canvas===ctx); if (old) { old.destroy(); chartInstances = chartInstances.filter(c=>c!==old); }
+  const ch = new Chart(ctx, {type:'bar',data:{labels:cl.map(c=>c.name?.split(' ')[0]||'?'),datasets:[{data:cl.map(c=>c[field]||0),backgroundColor:'rgba(0,174,239,.7)',borderColor:'#00aeef',borderWidth:1,borderRadius:6}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:v=>' '+fmt(v.raw)+' vues'}}},scales:{x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11},callback:v=>fmt(v)}}}}});
+  chartInstances.push(ch);
+};
+
+// ── CLIPPERS ──
+function buildClippers() {
+  const filtered = clippersVisible().filter(c => {
+    if (activeFilter==='all') return true;
+    if (['alpha','beta','delta','gamma'].includes(activeFilter)) return c.squad===activeFilter;
+    if (activeFilter==='pending') return c.review==='pending';
+    if (activeFilter==='revision') return c.review==='revision';
+    if (activeFilter==='error') return c.errors;
+    return true;
+  });
+  const isGM = isAdminOrGM();
+  return `<div class="filter-bar">
+    <span class="chip active" onclick="setFilter('all',this)">Tous</span>
+    ${isGM?'<span class="chip ca" onclick="setFilter(\'alpha\',this)">Alpha</span><span class="chip cb" onclick="setFilter(\'beta\',this)">Beta</span><span class="chip cd" onclick="setFilter(\'delta\',this)">Delta</span><span class="chip cg" onclick="setFilter(\'gamma\',this)">Gamma</span>':''}
+    <span class="chip" onclick="setFilter('pending',this)">En attente</span>
+    <span class="chip" onclick="setFilter('revision',this)">Révision</span>
+    <span class="chip" onclick="setFilter('error',this)">Erreurs</span>
+  </div>
+  <div class="grid-auto">${filtered.length ? filtered.map(c=>buildClipperCard(c)).join('') : '<div style="color:var(--text3);font-size:13px;grid-column:1/-1;padding:2rem 0;">Aucun clipper. Ajoutez-en un avec le bouton en haut à droite.</div>'}</div>`;
+}
+window.setFilter = function(f,el) { activeFilter=f; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); document.getElementById('mainContent').innerHTML=buildClippers(); };
+
+// ── SQUADS ──
+function buildSquads() {
+  return ['alpha','beta','delta','gamma'].map(sq => {
+    const members = clippers().filter(c=>c.squad===sq);
+    const sm = sqMeta[sq];
+    if (!isAdminOrGM() && roleMeta[currentUser.role]?.squad !== sq) return '';
+    const totalViews = members.reduce((s,c)=>s+(c.viewsTotal||0),0);
+    const avgV = members.length ? Math.round(members.reduce((s,c)=>s+(c.validation||0),0)/members.length) : 0;
+    const sqObjs = Object.values(DATA.squadObjectives[sq]||{});
+    const globalObjs = objectives();
+    const sqVals = {viewsWeek:members.reduce((s,c)=>s+(c.viewsWeek||0),0),viewsMonth:members.reduce((s,c)=>s+(c.viewsMonth||0),0),viewsTotal:members.reduce((s,c)=>s+(c.viewsTotal||0),0),clips:members.reduce((s,c)=>s+(c.clips||0),0),validation:avgV};
+    const allObjs = [...sqObjs.map(o=>({...o,scope:'squad'})),...globalObjs.map(o=>({...o,scope:'global'}))];
+    const canMgSq = isAdminOrGM()||(roleMeta[currentUser.role]?.squad===sq);
+    const objHTML = allObjs.length ? `<div style="margin-bottom:1rem;">
+  <div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:8px;">OBJECTIFS</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px;">
+  ${allObjs.map(obj=>{
+    const cur=sqVals[obj.type]||0;
+    const pct=Math.min(Math.round(cur/Math.max(obj.target,1)*100),100);
+    const col=pct>=100?'var(--green)':pct<40?'var(--red)':'var(--blue)';
+    return`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+        <div style="font-size:11px;font-weight:600;">${obj.name}</div>
+        <div style="display:flex;align-items:center;gap:5px;">
+          <span style="font-size:12px;font-weight:800;color:${col};">${pct}%</span>
+          ${canMgSq&&obj.scope==='squad'?`<button class="btn btn-danger" style="padding:1px 5px;font-size:10px;" onclick="deleteSqObj('${sq}','${obj.id}')">×</button>`:''}
+        </div>
+      </div>
+      <div style="height:3px;background:var(--border2);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px;"></div></div>
+      <div style="font-size:9px;color:var(--text3);margin-top:3px;">${obj.scope==='squad'?'Escouade':'Global'}</div>
+    </div>`;
+  }).join('')}
+  </div></div>` : '';
+    return `<div style="margin-bottom:2.5rem;">
+<div class="squad-bar">
+  <div style="width:12px;height:12px;border-radius:3px;background:${sm.color};flex-shrink:0;"></div>
+  <span style="font-size:15px;font-weight:800;">Escouade ${sq[0].toUpperCase()+sq.slice(1)}</span>
+  <span class="sq-badge ${sm.cls}">${members.length} clipper${members.length!==1?'s':''}</span>
+  <div class="squad-stats-mini">
+    <div class="ssm"><div class="ssm-val">${fmt(totalViews)}</div><div class="ssm-lbl">vues</div></div>
+    <div class="ssm"><div class="ssm-val">${members.reduce((s,c)=>s+(c.clips||0),0)}</div><div class="ssm-lbl">clips</div></div>
+    <div class="ssm"><div class="ssm-val">${avgV}%</div><div class="ssm-lbl">valid.</div></div>
+  </div>
+  ${canMgSq?`<button class="btn" style="font-size:11px;padding:5px 10px;" onclick="openSqObjModal('${sq}')">+ Objectif</button>`:''}
+</div>
+${objHTML}
+${members.length ? `<div class="grid-auto">${members.map(c=>buildClipperCard(c)).join('')}</div>` : '<div style="color:var(--text3);font-size:13px;">Aucun clipper.</div>'}
+</div>`;
+  }).join('');
+}
+
+// ── LEADERBOARD ──
+function buildLeaderboard() {
+  const cl = [...clippers()].sort((a,b)=>(b.viewsTotal||0)-(a.viewsTotal||0));
+  const rankIcon = i => i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
+  return `
+<div style="font-size:13px;font-weight:700;margin-bottom:1rem;color:var(--text2);">Mis à jour automatiquement à chaque modification</div>
+<div class="lb-table">
+  <div class="lb-header">
+    <span>#</span><span>Clipper</span><span>Escouade</span><span>Campagnes</span><span>Vues totales</span><span>Total payé</span><span>Niveau</span>
+  </div>
+  ${cl.length ? cl.map((c,i)=>{
+    const totalPaidOut = payments().filter(p=>p.clipperId===c.id&&p.status==='paid').reduce((s,p)=>s+(p.amount||0),0);
+    const campCount = (c.missions||[]).length;
+    const sm = sqMeta[c.squad]||sqMeta.alpha;
+    const lv = lvlMeta[c.level]||lvlMeta.neophyte;
+    return `<div class="lb-row" style="cursor:pointer;" onclick="goDetail('${c.id}')">
+      <div class="lb-rank${i===0?' r1':i===1?' r2':i===2?' r3':''}">${i < 3 ? ['🥇','🥈','🥉'][i] : i+1}</div>
+      <div class="lb-name">
+        <div class="lb-av ${sm.av}">${c.initials||'?'}</div>
+        <div><div style="font-size:13px;font-weight:700;">${c.name}</div><div style="font-size:10px;color:var(--text3);">Score ${score(c)}/100</div></div>
+      </div>
+      <span><span class="sq-badge ${sm.cls}">${(c.squad||'').toUpperCase()}</span></span>
+      <span class="lb-val">${campCount}</span>
+      <span class="lb-val blue">${fmt(c.viewsTotal)}</span>
+      <span class="lb-val gold">${totalPaidOut}€</span>
+      <span>${lvlBadge(c.level)}</span>
+    </div>`;
+  }).join('') : '<div style="padding:2rem;text-align:center;color:var(--text3);font-size:13px;">Aucun clipper dans le leaderboard.</div>'}
+</div>`;
+}
+
+// ── MISSIONS ──
+function buildMissions() {
+  const filtered = missions().filter(m => activeMissionFilter==='all' ? true : m.status===activeMissionFilter);
+  return `<div class="filter-bar">
+    <span class="chip active" onclick="setMFilter('all',this)">Toutes</span>
+    <span class="chip" onclick="setMFilter('active',this)">Actives</span>
+    <span class="chip" onclick="setMFilter('paused',this)">En pause</span>
+    <span class="chip" onclick="setMFilter('completed',this)">Terminées</span>
+  </div>
+  <div class="grid-auto">${filtered.length ? filtered.map(m=>buildMissionCard(m)).join('') : '<div style="color:var(--text3);font-size:13px;grid-column:1/-1;padding:2rem 0;">Aucune mission.</div>'}</div>`;
+}
+window.setMFilter = function(f,el) { activeMissionFilter=f; document.querySelectorAll('.chip').forEach(c=>c.classList.remove('active')); el.classList.add('active'); document.getElementById('mainContent').innerHTML=buildMissions(); };
+
+function buildMissionCard(m) {
+  const assignees = clippers().filter(c=>c.missionId===m.id);
+  const totalViews = assignees.reduce((s,c)=>s+(c.viewsTotal||0),0);
+  const totalClips = assignees.reduce((s,c)=>s+(c.clips||0),0);
+  const stCls = {active:'ms-active',paused:'ms-paused',completed:'ms-completed'}[m.status]||'ms-active';
+  const stLbl = {active:'Active',paused:'En pause',completed:'Terminée'}[m.status]||m.status;
+  return `<div class="card clickable" onclick="goMissionDetail('${m.id}')">
+  <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+    <div><div class="mc-id">${m.missionId}</div><div class="mc-name">${m.name}</div></div>
+    <span class="mc-status ${stCls}">${stLbl}</span>
+  </div>
+  <div class="c-rows">
+    <div class="c-row"><span class="c-lbl">Clippers</span><span class="c-val">${assignees.length}</span></div>
+    <div class="c-row"><span class="c-lbl">Clips</span><span class="c-val">${totalClips}/${m.clipsRequired||0}</span></div>
+    <div class="c-row"><span class="c-lbl">Vues</span><span class="c-val">${fmt(totalViews)}</span></div>
+    <div class="c-row"><span class="c-lbl">Objectif</span><span class="c-val">${m.viewsTarget||'—'}</span></div>
+  </div>
+  ${m.tags?.length?`<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:8px;">${m.tags.map(t=>`<span style="font-size:9px;font-weight:600;padding:2px 7px;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;color:var(--text2);">${t}</span>`).join('')}</div>`:''}
+</div>`;
+}
+
+// ── MISSION DETAIL ──
+function goMissionDetail(id) {
+  currentPage = 'missionDetail'; detailId = id;
+  document.getElementById('tbTitle').textContent = 'Détail mission';
+  destroyCharts(); buildTopbarRight();
+  document.getElementById('mainContent').innerHTML = buildMissionDetail();
+}
+
+function buildMissionDetail() {
+  const m = DATA.missions[detailId]; if (!m) return '<div style="color:var(--text3);padding:2rem;">Mission introuvable.</div>';
+  const assignees = clippers().filter(c=>c.missionId===m.id);
+  const totalViews = assignees.reduce((s,c)=>s+(c.viewsTotal||0),0);
+  const totalClips = assignees.reduce((s,c)=>s+(c.clips||0),0);
+  const avgVal = assignees.length ? Math.round(assignees.reduce((s,c)=>s+(c.validation||0),0)/assignees.length) : 0;
+  const pct = Math.min(Math.round(totalClips/Math.max(m.clipsRequired||1,1)*100),100);
+  const stCls = {active:'ms-active',paused:'ms-paused',completed:'ms-completed'}[m.status]||'ms-active';
+  const stLbl = {active:'Active',paused:'En pause',completed:'Terminée'}[m.status]||m.status;
+  return `<div class="detail-wrap">
+<div class="back-btn" onclick="navTo('missions')">← Retour aux missions</div>
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <div>
+      <div class="mc-id">${m.missionId}</div>
+      <div style="font-size:22px;font-weight:800;margin-bottom:8px;">${m.name}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+        <span class="mc-status ${stCls}">${stLbl}</span>
+        ${m.tags?.map(t=>`<span style="font-size:10px;font-weight:600;padding:2px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;color:var(--text2);">${t}</span>`).join('')||''}
+      </div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-size:36px;font-weight:800;color:var(--blue);">${pct}%</div>
+      <div style="font-size:10px;font-weight:700;color:var(--text3);">COMPLÉTÉ</div>
+      ${isAdminOrGM()?`<button class="btn btn-danger" style="margin-top:8px;font-size:11px;" onclick="deleteMissionFn('${m.id}')">Supprimer</button>`:''}
+    </div>
+  </div>
+  ${m.description?`<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.6;">${m.description}</div>`:''}
+  ${m.link?`<div style="margin-top:10px;"><a class="link-btn" href="${m.link}" target="_blank">Accéder aux ressources →</a></div>`:''}
+</div>
+${isManager()?`<div style="display:flex;gap:6px;margin-bottom:1.25rem;flex-wrap:wrap;">
+  ${['active','paused','completed'].map(s=>`<button class="s-btn${m.status===s?' sel-ok':''}" onclick="setMissionStatus('${m.id}','${s}')">${{active:'Active',paused:'En pause',completed:'Terminée'}[s]}</button>`).join('')}
+</div>`:''}
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem;">
+  <div class="stat-card accent"><div class="stat-lbl">CLIPS FOURNIS</div><div class="stat-val">${totalClips}/${m.clipsRequired||0}</div></div>
+  <div class="stat-card"><div class="stat-lbl">VUES GÉNÉRÉES</div><div class="stat-val">${fmt(totalViews)}</div><div class="stat-sub">Obj: ${m.viewsTarget||'—'}</div></div>
+  <div class="stat-card"><div class="stat-lbl">CLIPPERS</div><div class="stat-val">${assignees.length}</div></div>
+  <div class="stat-card"><div class="stat-lbl">TAUX VALID.</div><div class="stat-val">${avgVal}%</div></div>
+</div>
+<div style="font-size:13px;font-weight:700;margin-bottom:.75rem;">Clippers assignés</div>
+<div class="grid-auto">
+${assignees.length ? assignees.map(c=>`<div class="card clickable" onclick="goDetail('${c.id}')">
+  <div class="c-top"><div class="av ${sqMeta[c.squad]?.av||'av-alpha'}">${c.initials||'?'}</div>
+    <div><div class="c-name">${c.name}</div><span class="sq-badge ${sqMeta[c.squad]?.cls||'sq-alpha'}">${(c.squad||'').toUpperCase()}</span></div>
+  </div>
+  <div class="c-rows">
+    <div class="c-row"><span class="c-lbl">Vues</span><span class="c-val">${fmt(c.viewsTotal)}</span></div>
+    <div class="c-row"><span class="c-lbl">Clips</span><span class="c-val">${c.clips||0}</span></div>
+    <div class="c-row"><span class="c-lbl">Review</span><span class="pill ${rvPill(c.review)}">${rvLabel(c.review)}</span></div>
+  </div>
+</div>`).join('') : '<div style="color:var(--text3);font-size:13px;">Aucun clipper assigné.</div>'}
+</div></div>`;
+}
+
+// ── CLIPPER DETAIL ──
+function goDetail(id) {
+  currentPage = 'detail'; detailId = id;
+  document.getElementById('tbTitle').textContent = 'Fiche clipper';
+  destroyCharts(); buildTopbarRight();
+  document.getElementById('mainContent').innerHTML = buildDetail();
+}
+
+function buildDetail() {
+  const c = DATA.clippers[detailId]; if (!c) return '<div style="color:var(--text3);padding:2rem;">Clipper introuvable.</div>';
+  const sm = sqMeta[c.squad]||sqMeta.alpha;
+  const st = stMeta[c.status]||stMeta.active;
+  const lv = lvlMeta[c.level]||lvlMeta.neophyte;
+  const ed = canEdit(c);
+  const totalPaidOut = payments().filter(p=>p.clipperId===c.id&&p.status==='paid').reduce((s,p)=>s+(p.amount||0),0);
+  const pendingPay = payments().filter(p=>p.clipperId===c.id&&p.status==='pending').reduce((s,p)=>s+(p.amount||0),0);
+  const clipperPayments = payments().filter(p=>p.clipperId===c.id).sort((a,b)=>(b.time||0)-(a.time||0));
+  const links = [];
+  if (c.discord) links.push(`<a class="link-btn" href="https://discord.com" target="_blank">Discord: ${c.discord}</a>`);
+  if (c.tiktok) links.push(`<a class="link-btn" href="https://tiktok.com" target="_blank">TikTok: ${c.tiktok}</a>`);
+  if (c.instagram) links.push(`<a class="link-btn" href="https://instagram.com" target="_blank">Instagram: ${c.instagram}</a>`);
+  if (c.youtube) links.push(`<a class="link-btn" href="https://youtube.com" target="_blank">YouTube: ${c.youtube}</a>`);
+  const missionOptions = `<option value="">Non assignée</option>${missions().map(m=>`<option value="${m.id}"${c.missionId===m.id?' selected':''}>${m.missionId} — ${m.name}</option>`).join('')}`;
+  const clipperNotifs = notifications().filter(n=>n.clipperId===c.id).slice(0,5);
+  return `<div class="detail-wrap">
+<div class="back-btn" onclick="navTo('clippers')">← Retour aux clippers</div>
+<div class="detail-hero">
+  <div class="d-av ${sm.av}">${c.initials||'?'}</div>
+  <div>
+    <div class="d-name">${c.name}</div>
+    <div class="d-tags">
+      <span class="sq-badge ${sm.cls}">${(c.squad||'').toUpperCase()}</span>
+      <span class="tag" style="background:rgba(0,0,0,.4);color:${st.color};border:1px solid ${st.color}33;">${st.label}</span>
+      ${lvlBadge(c.level)}
+      ${c.errors?'<span class="tag" style="background:var(--red-bg);color:var(--red);">Erreur signalée</span>':''}
+      ${c.clipperCode?`<span class="tag" style="background:var(--green-bg);color:var(--green);">Code: ${c.clipperCode}</span>`:''}
+    </div>
+    ${links.length?`<div class="d-links">${links.join('')}</div>`:''}
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px;">
+    <div class="perf-block"><div class="perf-lbl">SCORE</div><div class="perf-num">${score(c)}</div><div class="perf-lbl">/100</div></div>
+    ${ed&&isAdminOrGM()?`<button class="btn btn-danger" onclick="deleteClipperFn('${c.id}')">Supprimer</button>`:''}
+  </div>
+</div>
+<div class="detail-stats">
+  <div class="ds"><div class="ds-lbl">CLIPS</div><div class="ds-val${ed?' editable':''}" ${ed?`onclick="startEdit('${c.id}','clips','Clips rendus',${c.clips||0},true)"`:''} >${c.clips||0}</div></div>
+  <div class="ds"><div class="ds-lbl">VUES SEM.</div><div class="ds-val${ed?' editable':''}" ${ed?`onclick="startEdit('${c.id}','viewsWeek','Vues semaine',${c.viewsWeek||0},true)"`:''} >${fmt(c.viewsWeek)}</div></div>
+  <div class="ds"><div class="ds-lbl">VUES MOIS</div><div class="ds-val${ed?' editable':''}" ${ed?`onclick="startEdit('${c.id}','viewsMonth','Vues mois',${c.viewsMonth||0},true)"`:''} >${fmt(c.viewsMonth)}</div></div>
+  <div class="ds"><div class="ds-lbl">VUES TOTAL</div><div class="ds-val${ed?' editable':''}" ${ed?`onclick="startEdit('${c.id}','viewsTotal','Vues total',${c.viewsTotal||0},true)"`:''} >${fmt(c.viewsTotal)}</div></div>
+  <div class="ds"><div class="ds-lbl">EN ATTENTE</div><div class="ds-val" style="color:var(--amber);">${pendingPay}€</div></div>
+  <div class="ds"><div class="ds-lbl">TOTAL PAYÉ</div><div class="ds-val" style="color:var(--green);">${totalPaidOut}€</div></div>
+</div>
+<div class="detail-grid">
+  <div class="info-card" style="margin-bottom:0;">
+    <div class="info-card-title">MISSION ASSIGNÉE</div>
+    ${ed?`<select class="f-select" onchange="assignMission('${c.id}',this.value)">${missionOptions}</select>`:`<div style="font-size:13px;font-weight:600;">${missionName(c.missionId)}</div>`}
+    <div style="margin-top:1rem;"><div class="info-card-title">STATUT REVIEW</div>
+    <div class="status-btns" ${ed?'':'style="pointer-events:none;opacity:.5;"'}>
+      <button class="s-btn${c.review==='pending'?' sel-pending':''}" onclick="setReview('${c.id}','pending')">En attente</button>
+      <button class="s-btn${c.review==='ok'?' sel-ok':''}" onclick="setReview('${c.id}','ok')">Validé</button>
+      <button class="s-btn${c.review==='revision'?' sel-revision':''}" onclick="setReview('${c.id}','revision')">Révision</button>
+    </div></div>
+    <div style="margin-top:1rem;"><div class="info-card-title">NIVEAU</div>
+    <div class="lvl-btns" ${ed?'':'style="pointer-events:none;opacity:.5;"'}>
+      ${['neophyte','veteran','spartiate'].map(l=>`<button class="lvl-btn${c.level===l?' active':''}" onclick="setLevel('${c.id}','${l}')">${lvlMeta[l].label}</button>`).join('')}
+    </div></div>
+    <div style="margin-top:1rem;"><div class="info-card-title">STATUT</div>
+    <div class="status-btns" ${ed?'':'style="pointer-events:none;opacity:.5;"'}>
+      ${['active','inactive','suspended'].map(s=>`<button class="s-btn${c.status===s?' sel-ok':''}" onclick="setStatus('${c.id}','${s}')">${stMeta[s].label}</button>`).join('')}
+    </div></div>
+    <div style="margin-top:1rem;"><div class="info-card-title">ERREUR</div>
+    <button class="btn${c.errors?' btn-danger':''}" onclick="toggleError('${c.id}')" ${ed?'':'disabled'}>${c.errors?'Effacer':'Signaler erreur'}</button>
+    </div>
+  </div>
+  <div class="info-card" style="margin-bottom:0;">
+    <div class="info-card-title">INFORMATIONS</div>
+    <div class="info-row"><span class="info-key">Validation</span><span class="${ed?'info-editable':''}" ${ed?`onclick="startEdit('${c.id}','validation','Taux validation (%)',${c.validation||0},true)"`:''} >${c.validation||0}%</span></div>
+    <div class="info-row"><span class="info-key">Recruté le</span><span class="${ed?'info-editable':''}" ${ed?`onclick="startEditStr('${c.id}','recruited','Date de recrutement','${c.recruited||''}')"`:''} >${c.recruited||'—'}</span></div>
+    <div class="info-row"><span class="info-key">Discord</span><span class="${ed?'info-editable':''}" ${ed?`onclick="startEditStr('${c.id}','discord','Discord','${c.discord||''}')"`:''} >${c.discord||'—'}</span></div>
+    <div class="info-row"><span class="info-key">TikTok</span><span class="${ed?'info-editable':''}" ${ed?`onclick="startEditStr('${c.id}','tiktok','TikTok','${c.tiktok||''}')"`:''} >${c.tiktok||'—'}</span></div>
+    <div class="info-row"><span class="info-key">Instagram</span><span class="${ed?'info-editable':''}" ${ed?`onclick="startEditStr('${c.id}','instagram','Instagram','${c.instagram||''}')"`:''} >${c.instagram||'—'}</span></div>
+    <div class="info-row"><span class="info-key">YouTube</span><span class="${ed?'info-editable':''}" ${ed?`onclick="startEditStr('${c.id}','youtube','YouTube','${c.youtube||''}')"`:''} >${c.youtube||'—'}</span></div>
+  </div>
+</div>
+<div class="info-card">
+  <div class="info-card-title">LEADERBOARD — POSITION</div>
+  ${buildMiniLeaderboard(c.id)}
+</div>
+<div class="info-card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+    <div class="info-card-title" style="margin-bottom:0;">FICHES DE PAIE</div>
+    ${ed&&isAdminOrGM()?`<button class="btn btn-blue" style="font-size:11px;padding:5px 10px;" onclick="openPayForClipper('${c.id}')">+ Ajouter</button>`:''}
+  </div>
+  ${clipperPayments.length ? `<div class="pay-table" style="margin-bottom:0;">
+    <div class="pay-header"><span>Raison</span><span>Montant</span><span>Date</span><span>Statut</span><span></span><span></span></div>
+    ${clipperPayments.map(p=>`<div class="pay-row">
+      <span style="font-weight:600;">${p.reason||'—'}</span>
+      <span style="color:${p.status==='paid'?'var(--green)':'var(--amber)'};font-weight:700;">${p.amount||0}€</span>
+      <span style="color:var(--text3);font-size:11px;">${p.date||'—'}</span>
+      <span><span class="pill ${p.status==='paid'?'p-ok':'p-pending'}">${p.status==='paid'?'Payé':'En attente'}</span></span>
+      ${ed&&isAdminOrGM()?`<span></span><span><button class="btn btn-danger" style="font-size:10px;padding:3px 7px;" onclick="deletePaymentFn('${p.id}')">×</button></span>`:'<span></span><span></span>'}
+    </div>`).join('')}
+  </div>` : '<div style="color:var(--text3);font-size:12px;">Aucune fiche de paie.</div>'}
+</div>
+${clipperNotifs.length?`<div class="info-card">
+  <div class="info-card-title">NOTIFICATIONS REÇUES</div>
+  ${clipperNotifs.map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;">
+    <div class="notif-dot" style="background:${n.color||'var(--blue)'};"></div>
+    <div style="flex:1;"><div style="font-weight:600;">${n.title}</div><div style="color:var(--text3);font-size:11px;">${n.sub||''}</div></div>
+  </div>`).join('')}
+</div>`:''}
+<div class="info-card">
+  <div class="info-card-title">NOTES MANAGER</div>
+  <textarea class="notes-ta" id="notesArea" ${ed?'':'readonly'} onchange="saveNotes('${c.id}')">${c.notes||''}</textarea>
+</div>
+</div>`;
+}
+
+function buildMiniLeaderboard(clipperId) {
+  const cl = [...clippers()].sort((a,b)=>(b.viewsTotal||0)-(a.viewsTotal||0));
+  const pos = cl.findIndex(c=>c.id===clipperId);
+  const c = DATA.clippers[clipperId];
+  if (!c) return '';
+  const totalPaidOut = payments().filter(p=>p.clipperId===c.id&&p.status==='paid').reduce((s,p)=>s+(p.amount||0),0);
+  return `<div style="display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap;">
+    <div style="font-size:36px;font-weight:800;color:${pos===0?'var(--gold)':pos===1?'#C0C0C0':pos===2?'#CD7F32':'var(--text2)'};">#${pos+1}</div>
+    <div style="display:flex;gap:12px;flex-wrap:wrap;">
+      <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.08em;">VUES TOTALES</div><div style="font-size:16px;font-weight:800;color:var(--blue);">${fmt(c.viewsTotal)}</div></div>
+      <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.08em;">TOTAL PAYÉ</div><div style="font-size:16px;font-weight:800;color:var(--gold);">${totalPaidOut}€</div></div>
+      <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.08em;">CAMPAGNES</div><div style="font-size:16px;font-weight:800;">${(c.missions||[]).length}</div></div>
+      <div><div style="font-size:10px;color:var(--text3);font-weight:700;letter-spacing:.08em;">NIVEAU</div><div style="margin-top:2px;">${lvlBadge(c.level)}</div></div>
+    </div>
+  </div>`;
+}
+
+// ── PAYMENTS ──
+function buildPayments() {
+  const pending = payments().filter(p=>p.status==='pending').sort((a,b)=>(b.time||0)-(a.time||0));
+  const paid = payments().filter(p=>p.status==='paid').sort((a,b)=>(b.time||0)-(a.time||0));
+  const totalPending = pending.reduce((s,p)=>s+(p.amount||0),0);
+  const totalPaid = paid.reduce((s,p)=>s+(p.amount||0),0);
+  const clippersToPay = [...new Set(pending.map(p=>p.clipperId))].length;
+  return `
+<div class="stats-row">
+  <div class="stat-card accent"><div class="stat-lbl">PAIEMENTS EN ATTENTE</div><div class="stat-val" style="color:var(--amber);">${totalPending}€</div><div class="stat-sub">${pending.length} fiches</div></div>
+  <div class="stat-card"><div class="stat-lbl">TOTAL PAYOUT</div><div class="stat-val" style="color:var(--green);">${totalPaid}€</div><div class="stat-sub">${paid.length} versements</div></div>
+  <div class="stat-card"><div class="stat-lbl">CLIPPERS À PAYER</div><div class="stat-val">${clippersToPay}</div></div>
+  <div class="stat-card"><div class="stat-lbl">BUDGET TOTAL</div><div class="stat-val">${totalPending+totalPaid}€</div></div>
+</div>
+<div style="font-size:13px;font-weight:700;margin-bottom:.75rem;">Paiements en attente</div>
+<div class="pay-table">
+  <div class="pay-header"><span>Clipper</span><span>Raison</span><span>Montant</span><span>Date</span><span>Statut</span><span>Action</span></div>
+  ${pending.length ? pending.map(p=>`<div class="pay-row">
+    <span style="font-weight:700;">${p.clipperName||'—'}</span>
+    <span style="color:var(--text3);font-size:11px;">${p.reason||'—'}</span>
+    <span style="color:var(--amber);font-weight:700;">${p.amount||0}€</span>
+    <span style="color:var(--text3);font-size:11px;">${p.date||'—'}</span>
+    <span><span class="pill p-pending">En attente</span></span>
+    <span style="display:flex;gap:5px;">
+      <button class="btn btn-green" style="font-size:11px;padding:4px 8px;" onclick="markPayPaid('${p.id}')">Marquer payé</button>
+      <button class="btn btn-danger" style="font-size:11px;padding:4px 8px;" onclick="deletePaymentFn('${p.id}')">×</button>
+    </span>
+  </div>`).join('') : '<div style="padding:1rem;color:var(--text3);font-size:12px;">Aucun paiement en attente.</div>'}
+</div>
+<div style="font-size:13px;font-weight:700;margin-bottom:.75rem;">Historique des paiements</div>
+<div class="pay-table">
+  <div class="pay-header"><span>Clipper</span><span>Raison</span><span>Montant</span><span>Date</span><span>Statut</span><span>Action</span></div>
+  ${paid.length ? paid.map(p=>`<div class="pay-row">
+    <span style="font-weight:700;">${p.clipperName||'—'}</span>
+    <span style="color:var(--text3);font-size:11px;">${p.reason||'—'}</span>
+    <span style="color:var(--green);font-weight:700;">${p.amount||0}€</span>
+    <span style="color:var(--text3);font-size:11px;">${p.date||'—'}</span>
+    <span><span class="pill p-ok">Payé</span></span>
+    <span><button class="btn btn-danger" style="font-size:11px;padding:4px 8px;" onclick="deletePaymentFn('${p.id}')">Retirer</button></span>
+  </div>`).join('') : '<div style="padding:1rem;color:var(--text3);font-size:12px;">Aucun historique.</div>'}
+</div>`;
+}
+
+// ── ANALYTICS ──
+function buildAnalytics() {
+  const cl = clippers();
+  return `
+<div class="stats-row" style="margin-bottom:1.5rem;">
+  <div class="stat-card accent"><div class="stat-lbl">VUES SEMAINE</div><div class="stat-val">${fmt(cl.reduce((s,c)=>s+(c.viewsWeek||0),0))}</div></div>
+  <div class="stat-card"><div class="stat-lbl">VUES MOIS</div><div class="stat-val">${fmt(cl.reduce((s,c)=>s+(c.viewsMonth||0),0))}</div></div>
+  <div class="stat-card"><div class="stat-lbl">VUES TOTAL</div><div class="stat-val">${fmt(cl.reduce((s,c)=>s+(c.viewsTotal||0),0))}</div></div>
+  <div class="stat-card"><div class="stat-lbl">CLIPS TOTAL</div><div class="stat-val">${cl.reduce((s,c)=>s+(c.clips||0),0)}</div></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem;">
+  <div class="chart-card"><div class="chart-header" style="margin-bottom:1rem;"><div class="chart-title">Vues totales par clipper</div></div><canvas id="analyticsBar" height="130"></canvas></div>
+  <div class="chart-card"><div class="chart-header" style="margin-bottom:1rem;"><div class="chart-title">Taux validation</div></div><canvas id="validationChart" height="130"></canvas></div>
+</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+  <div class="chart-card"><div class="chart-header" style="margin-bottom:1rem;"><div class="chart-title">Vues par escouade</div></div><canvas id="squadViewsChart" height="130"></canvas></div>
+  <div class="chart-card"><div class="chart-header" style="margin-bottom:1rem;"><div class="chart-title">Score performance</div></div><canvas id="scoreChart" height="130"></canvas></div>
+</div>`;
+}
+
+function initAnalyticsCharts() {
+  const cl = clippers();
+  if (!cl.length) return;
+  const colors = ['#00aeef','#7F77DD','#1D9E75','#D85A30','#D4537E'];
+  const mk = (id, type, data, opts) => { const ctx = document.getElementById(id); if (!ctx) return; const ch = new Chart(ctx, {type, data, options:{responsive:true, plugins:{legend:{display:false}}, ...opts}}); chartInstances.push(ch); };
+  mk('analyticsBar','bar',{labels:cl.map(c=>c.name?.split(' ')[0]||'?'),datasets:[{data:cl.map(c=>c.viewsTotal||0),backgroundColor:'rgba(0,174,239,.7)',borderColor:'#00aeef',borderWidth:1,borderRadius:6}]},{scales:{x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11},callback:v=>fmt(v)}}}});
+  mk('validationChart','bar',{labels:cl.map(c=>c.name?.split(' ')[0]||'?'),datasets:[{data:cl.map(c=>c.validation||0),backgroundColor:cl.map(c=>(c.validation||0)>=80?'rgba(61,184,122,.7)':(c.validation||0)>=60?'rgba(0,174,239,.7)':'rgba(224,85,85,.7)'),borderRadius:6}]},{scales:{x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11}}},y:{min:0,max:100,ticks:{callback:v=>v+'%',color:'#44445a',font:{family:'Encode Sans',size:11}}}}});
+  const squads=['alpha','beta','delta','gamma'];
+  mk('squadViewsChart','doughnut',{labels:squads.map(s=>s[0].toUpperCase()+s.slice(1)),datasets:[{data:squads.map(sq=>clippers().filter(c=>c.squad===sq).reduce((s,c)=>s+(c.viewsTotal||0),0)),backgroundColor:['rgba(127,119,221,.8)','rgba(29,158,117,.8)','rgba(216,90,48,.8)','rgba(212,83,126,.8)'],borderWidth:0}]},{cutout:'60%',plugins:{legend:{display:true,position:'bottom',labels:{color:'#8888aa',font:{family:'Encode Sans',size:11},padding:8,boxWidth:10}}}});
+  mk('scoreChart','bar',{labels:cl.map(c=>c.name?.split(' ')[0]||'?'),datasets:[{data:cl.map(c=>score(c)),backgroundColor:'rgba(0,174,239,.5)',borderColor:'#00aeef',borderWidth:1,borderRadius:6}]},{scales:{x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#44445a',font:{family:'Encode Sans',size:11}}},y:{min:0,max:100,ticks:{color:'#44445a',font:{family:'Encode Sans',size:11}}}}});
+}
+
+// ── OBJECTIVES ──
+function buildObjectives() {
+  const cl = clippers();
+  const curVals = {viewsWeek:cl.reduce((s,c)=>s+(c.viewsWeek||0),0),viewsMonth:cl.reduce((s,c)=>s+(c.viewsMonth||0),0),viewsTotal:cl.reduce((s,c)=>s+(c.viewsTotal||0),0),clips:cl.reduce((s,c)=>s+(c.clips||0),0),validation:cl.length?Math.round(cl.reduce((s,c)=>s+(c.validation||0),0)/cl.length):0};
+  const pLbls = {week:'Semaine',month:'Mois',total:'Total'};
+  const tLbls = {viewsWeek:'Vues sem.',viewsMonth:'Vues mois',viewsTotal:'Vues total',clips:'Clips',validation:'Taux valid.'};
+  const squads = ['alpha','beta','delta','gamma'];
+  const sqColors = {alpha:'var(--alpha)',beta:'var(--beta)',delta:'var(--delta)',gamma:'var(--gamma)'};
+  return `
+<div style="font-size:13px;font-weight:700;margin-bottom:.75rem;">Objectifs globaux</div>
+<div class="grid-auto" style="margin-bottom:1.5rem;">
+${objectives().map(obj=>{
+  const cur=curVals[obj.type]||0;
+  const pct=Math.min(Math.round(cur/Math.max(obj.target||1,1)*100),100);
+  const fc=pct>=100?'success':pct<40?'danger':'';
+  return`<div class="obj-card">
+    <div class="obj-header">
+      <div><div class="obj-name">${obj.name}</div><div style="font-size:11px;color:var(--text3);margin-top:3px;">${pLbls[obj.period]||obj.period} · ${tLbls[obj.type]||obj.type}</div></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="font-size:20px;font-weight:800;color:${pct>=100?'var(--green)':pct<40?'var(--red)':'var(--blue)'};">${pct}%</div>
+        ${isAdminOrGM()?`<button class="btn btn-danger" style="padding:4px 8px;font-size:11px;" onclick="deleteObj('${obj.id}')">×</button>`:''}
+      </div>
+    </div>
+    <div class="obj-bar"><div class="obj-fill ${fc}" style="width:${pct}%;"></div></div>
+    <div class="obj-meta"><span>${obj.type==='validation'?cur+'%':fmt(cur)} / ${obj.type==='validation'?obj.target+'%':fmt(obj.target)}</span><span>${pct>=100?'✓ Atteint':'En cours'}</span></div>
+  </div>`;
+}).join('')}
+${!objectives().length?'<div style="color:var(--text3);font-size:13px;grid-column:1/-1;padding:1rem 0;">Aucun objectif global.</div>':''}
+</div>
+<div style="border-top:1px solid var(--border);padding-top:1.5rem;">
+<div style="font-size:13px;font-weight:700;margin-bottom:1rem;">Objectifs par escouade</div>
+${squads.map(sq=>{
+  const sqObjs=Object.values(DATA.squadObjectives[sq]||{});
+  const sqM=clippers().filter(c=>c.squad===sq);
+  const sqV={viewsWeek:sqM.reduce((s,c)=>s+(c.viewsWeek||0),0),viewsMonth:sqM.reduce((s,c)=>s+(c.viewsMonth||0),0),viewsTotal:sqM.reduce((s,c)=>s+(c.viewsTotal||0),0),clips:sqM.reduce((s,c)=>s+(c.clips||0),0),validation:sqM.length?Math.round(sqM.reduce((s,c)=>s+(c.validation||0),0)/sqM.length):0};
+  const canMg=isAdminOrGM()||(roleMeta[currentUser.role]?.squad===sq);
+  return`<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;flex-wrap:wrap;gap:8px;">
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div style="width:10px;height:10px;border-radius:3px;background:${sqColors[sq]};"></div>
+        <span style="font-size:14px;font-weight:700;">Escouade ${sq[0].toUpperCase()+sq.slice(1)}</span>
+        <span class="sq-badge sq-${sq}">${sqM.length} clipper${sqM.length!==1?'s':''}</span>
+      </div>
+      ${canMg?`<button class="btn btn-blue" style="font-size:11px;padding:5px 10px;" onclick="openSqObjModal('${sq}')">+ Objectif</button>`:''}
+    </div>
+    <div class="grid-auto">
+    ${sqObjs.map(obj=>{
+      const cur=sqV[obj.type]||0;
+      const pct=Math.min(Math.round(cur/Math.max(obj.target||1,1)*100),100);
+      const col=pct>=100?'var(--green)':pct<40?'var(--red)':'var(--blue)';
+      return`<div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+          <div style="font-size:12px;font-weight:600;">${obj.name}</div>
+          <div style="display:flex;align-items:center;gap:5px;">
+            <span style="font-size:14px;font-weight:800;color:${col};">${pct}%</span>
+            ${canMg?`<button class="btn btn-danger" style="padding:2px 6px;font-size:10px;" onclick="deleteSqObj('${sq}','${obj.id}')">×</button>`:''}
+          </div>
+        </div>
+        <div style="height:3px;background:var(--border2);border-radius:2px;overflow:hidden;"><div style="height:100%;width:${pct}%;background:${col};border-radius:2px;"></div></div>
+        <div style="font-size:9px;color:var(--text3);margin-top:3px;">${obj.type==='validation'?cur+'%':fmt(cur)} / ${obj.type==='validation'?obj.target+'%':fmt(obj.target)}</div>
+      </div>`;
+    }).join('')}
+    ${!sqObjs.length?`<div style="color:var(--text3);font-size:12px;padding:.5rem 0;">Aucun objectif d'escouade.</div>`:''}
+    </div>
+  </div>`;
+}).join('')}
+</div>`;
+}
+
+// ── CALENDAR ──
+function buildCalendar() {
+  const now = new Date(); const year = now.getFullYear(); const month = now.getMonth();
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  const mNames = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+  const dNames = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const startDay = (firstDay+6)%7;
+  const yrStr = year+'-'+String(month+1).padStart(2,'0');
+  let html = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:10px;">
+    <div style="font-size:18px;font-weight:800;">${mNames[month]} ${year}</div>
+    ${isManager()?`<button class="btn btn-blue" onclick="openTaskModal()">+ Ajouter tâche</button>`:''}
+  </div>
+  <div class="cal-header">${dNames.map(d=>`<div class="cal-day-name">${d}</div>`).join('')}</div>
+  <div class="cal-grid">`;
+  for (let i=0;i<startDay;i++) html += `<div class="cal-day other-month"></div>`;
+  for (let d=1;d<=daysInMonth;d++) {
+    const ds = yrStr+'-'+String(d).padStart(2,'0');
+    const isToday = d===now.getDate()&&month===now.getMonth()&&year===now.getFullYear();
+    const dayTasks = tasks().filter(t=>t.date===ds);
+    const evts = dayTasks.map(t=>{
+      const col = t.status==='done'?'var(--green)':t.status==='missed'?'var(--red)':'var(--amber)';
+      return `<div class="cal-event" style="background:${col}22;color:${col};" onclick="event.stopPropagation();openCalDay('${ds}')">${t.title?.slice(0,16)||''}${(t.title?.length||0)>16?'…':''}</div>`;
+    }).join('');
+    html += `<div class="cal-day${isToday?' today':''}" onclick="openCalDay('${ds}')"><div class="cal-day-num">${d}</div>${evts}</div>`;
+  }
+  const rem = (7-((startDay+daysInMonth)%7))%7;
+  for (let i=0;i<rem;i++) html += `<div class="cal-day other-month"></div>`;
+  html += `</div>`;
+  const upcoming = tasks().filter(t=>t.status==='pending').sort((a,b)=>a.date?.localeCompare(b.date||'')||0).slice(0,5);
+  if (upcoming.length) {
+    html += `<div style="margin-top:1.5rem;font-size:13px;font-weight:700;margin-bottom:.75rem;">Tâches à venir</div>`;
+    html += upcoming.map(t=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;" onclick="openCalDay('${t.date}')">
+      <div style="flex:1;"><div style="font-size:13px;font-weight:600;">${t.title||''}</div><div style="font-size:11px;color:var(--text3);">${t.date||''}</div></div>
+      <span class="pill p-pending">En attente</span>
+      ${isManager()?`<button class="btn btn-danger" style="font-size:11px;padding:3px 7px;" onclick="event.stopPropagation();deleteTaskFn('${t.id}')">×</button>`:''}
+    </div>`).join('');
+  }
+  return html;
+}
+
+window.openCalDay = function(ds) {
+  currentPage = 'calDay'; detailId = ds;
+  document.getElementById('tbTitle').textContent = 'Tâches — '+ds;
+  buildTopbarRight();
+  document.getElementById('mainContent').innerHTML = buildCalDay();
+};
+
+function buildCalDay() {
+  const ds = detailId;
+  const dayTasks = tasks().filter(t=>t.date===ds);
+  const vLbls = {100:'100% validé',50:'50% validé',0:'Non validé'};
+  const vColors = {100:'var(--green)',50:'var(--amber)',0:'var(--red)'};
+  return `<div style="max-width:700px;">
+<div class="back-btn" onclick="navTo('calendar')">← Retour au calendrier</div>
+<div style="font-size:18px;font-weight:800;margin-bottom:1.25rem;">${ds}</div>
+${isManager()?`<button class="btn btn-blue" style="margin-bottom:1rem;" onclick="openTaskModal('${ds}')">+ Ajouter tâche</button>`:''}
+${dayTasks.length ? dayTasks.map(t=>{
+  const cl = t.clipperId?DATA.clippers[t.clipperId]:null;
+  const stCol = t.status==='done'?'var(--green)':t.status==='missed'?'var(--red)':'var(--amber)';
+  return `<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:12px;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px;">
+      <div><div style="font-size:15px;font-weight:700;">${t.title||''}</div>${cl?`<div style="font-size:12px;color:var(--text3);margin-top:3px;">Clipper : ${cl.name}</div>`:''}</div>
+      ${isManager()?`<button class="btn btn-danger" style="font-size:11px;padding:4px 8px;" onclick="deleteTaskFn('${t.id}')">Supprimer</button>`:''}
+    </div>
+    ${isManager()?`
+    <div style="margin-bottom:10px;"><div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:8px;">STATUT</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="s-btn${t.status==='done'?' sel-ok':''}" onclick="setTaskStatus('${t.id}','done')">Fait</button>
+      <button class="s-btn${t.status==='pending'?' sel-pending':''}" onclick="setTaskStatus('${t.id}','pending')">En attente</button>
+      <button class="s-btn${t.status==='missed'?' sel-revision':''}" onclick="setTaskStatus('${t.id}','missed')">Non fait</button>
+    </div></div>
+    <div><div style="font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--text3);margin-bottom:8px;">VALIDATION</div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      ${[100,50,0].map(v=>`<button class="s-btn${t.validation===v?' sel-ok':''}" style="color:${vColors[v]};" onclick="setTaskValidation('${t.id}',${v})">${vLbls[v]}</button>`).join('')}
+    </div></div>
+    ` : `<span class="pill" style="background:${stCol}22;color:${stCol};">${t.status==='done'?'Fait':t.status==='missed'?'Non fait':'En attente'}</span>${t.validation!==null&&t.validation!==undefined?`<span class="pill" style="background:${vColors[t.validation]}22;color:${vColors[t.validation]};margin-left:6px;">${vLbls[t.validation]}</span>`:''}`}
+  </div>`;
+}).join('') : `<div style="color:var(--text3);font-size:13px;padding:2rem 0;text-align:center;">Aucune tâche pour ce jour.</div>`}
+</div>`;
+}
+
+// ── ALERTS ──
+function buildAlerts() {
+  const cl = clippersVisible();
+  const alerts = [];
+  cl.forEach(c=>{
+    if(c.errors) alerts.push({color:'var(--red)',text:'Erreur signalée — '+c.name,sub:'',urgent:true});
+    if(c.review==='revision') alerts.push({color:'var(--amber)',text:'Révision en attente — '+c.name,sub:'',urgent:true});
+    if(c.review==='pending') alerts.push({color:'var(--blue)',text:'Review en attente — '+c.name,sub:'',urgent:false});
+  });
+  payments().filter(p=>p.status==='pending').forEach(p=>alerts.push({color:'var(--green)',text:'Paiement en attente — '+p.clipperName,sub:p.amount+'€ · '+p.reason,urgent:false}));
+  if (!alerts.length) return '<div style="color:var(--text3);font-size:14px;padding:3rem 0;text-align:center;">Aucune alerte active.</div>';
+  return `<div style="display:flex;flex-direction:column;gap:8px;max-width:700px;">${alerts.map(a=>`<div class="alert-item" style="border-left-color:${a.color};"><div class="alert-dot" style="background:${a.color};"></div><div style="flex:1;"><div class="alert-text">${a.text}</div><div class="alert-sub">${a.sub}</div></div>${a.urgent?`<span style="font-size:10px;font-weight:700;color:var(--red);background:var(--red-bg);padding:2px 8px;border-radius:4px;">URGENT</span>`:''}</div>`).join('')}</div>`;
+}
+
+// ── TEAM ──
+function buildTeam() {
+  const isAdmin = currentUser.role==='admin';
+  const isGM = currentUser.role==='gm';
+  const canMg = isAdmin||isGM;
+  return `
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.25rem;margin-bottom:1.5rem;">
+  <div style="font-size:13px;font-weight:700;margin-bottom:.5rem;">Inviter un membre</div>
+  <div style="font-size:12px;color:var(--text3);">Créez un compte via le bouton "Ajouter membre". Un code est généré — communiquez-le à la personne. Les clippers reçoivent automatiquement un code à la création de leur fiche.</div>
+  ${isAdmin?`<div style="margin-top:10px;font-size:11px;color:var(--purple);background:var(--purple-bg);padding:8px 12px;border-radius:6px;"><strong>Code admin :</strong> ${ADMIN_CODE}</div>`:''}
+</div>
+<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;margin-bottom:1.5rem;">
+${team().map(m=>{
+  const rm = roleMeta[m.role]||{};
+  const isMe = m.id===currentUser.id;
+  const showCode = isAdmin||(isGM&&m.role!=='admin');
+  const canDel = (isAdmin&&!isMe)||(isGM&&!isMe&&m.role!=='admin');
+  return `<div class="member-card">
+    ${canDel?`<button style="position:absolute;top:10px;right:10px;background:transparent;border:none;cursor:pointer;color:var(--text3);font-size:18px;" onclick="deleteMemberFn('${m.id}')">×</button>`:''}
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <div class="s-av">${m.initials||m.name?.[0]||'?'}</div>
+      <div><div style="font-size:14px;font-weight:700;">${m.name}${isMe?' (vous)':''}</div><div style="font-size:11px;color:var(--text3);">${rm.label||m.role}</div></div>
+    </div>
+    <span class="role-badge ${rm.badge||'rb-gm'}">${rm.label||m.role}</span>
+    ${showCode?`<div class="code-chip">${m.code}</div>`:''}
+    ${m.role==='client'&&isGM?`<div style="margin-top:10px;"><div style="font-size:10px;font-weight:700;color:var(--text3);margin-bottom:4px;">MISSION LIÉE</div><select class="f-select" style="font-size:11px;" onchange="linkClientMission('${m.id}',this.value)"><option value="">Aucune</option>${missions().map(ms=>`<option value="${ms.id}"${m.missionId===ms.id?' selected':''}>${ms.missionId} — ${ms.name}</option>`).join('')}</select></div>`:''}
+  </div>`;
+}).join('')}
+</div>
+<div style="font-size:13px;font-weight:700;margin-bottom:.75rem;">Codes clippers</div>
+<div style="display:flex;flex-direction:column;gap:6px;">
+${clippers().map(c=>`<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--bg2);border:1px solid var(--border);border-radius:8px;font-size:13px;">
+  <div class="av ${sqMeta[c.squad]?.av||'av-alpha'}" style="width:30px;height:30px;font-size:11px;border-radius:8px;">${c.initials||'?'}</div>
+  <span style="font-weight:600;">${c.name}</span>
+  <span class="sq-badge ${sqMeta[c.squad]?.cls||'sq-alpha'}">${(c.squad||'').toUpperCase()}</span>
+  <span style="margin-left:auto;font-family:monospace;font-size:11px;background:var(--bg3);padding:3px 10px;border-radius:4px;color:var(--text2);">${c.clipperCode||'—'}</span>
+</div>`).join('')}
+</div>`;
+}
+
+// ── MY STATS (clipper) ──
+function buildMyStats() {
+  const c = DATA.clippers[currentUser.clipperId]; if (!c) return '<div style="color:var(--text3);padding:2rem;">Fiche introuvable.</div>';
+  const sm = sqMeta[c.squad]||sqMeta.alpha;
+  const totalPaidOut = payments().filter(p=>p.clipperId===c.id&&p.status==='paid').reduce((s,p)=>s+(p.amount||0),0);
+  const pendingPay = payments().filter(p=>p.clipperId===c.id&&p.status==='pending').reduce((s,p)=>s+(p.amount||0),0);
+  const myNotifs = notifications().filter(n=>n.clipperId===c.id).slice(0,10);
+  return `<div style="max-width:700px;">
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap;">
+  <div class="d-av ${sm.av}" style="width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;">${c.initials||'?'}</div>
+  <div style="flex:1;">
+    <div style="font-size:22px;font-weight:800;">${c.name}</div>
+    <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
+      <span class="sq-badge ${sm.cls}">${(c.squad||'').toUpperCase()}</span>
+      ${lvlBadge(c.level)}
+    </div>
+  </div>
+  <div style="text-align:right;"><div style="font-size:40px;font-weight:800;color:var(--blue);line-height:1;">${score(c)}</div><div style="font-size:10px;font-weight:700;color:var(--text3);">SCORE /100</div></div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem;">
+  <div class="stat-card accent"><div class="stat-lbl">VUES SEMAINE</div><div class="stat-val">${fmt(c.viewsWeek)}</div></div>
+  <div class="stat-card"><div class="stat-lbl">VUES MOIS</div><div class="stat-val">${fmt(c.viewsMonth)}</div></div>
+  <div class="stat-card"><div class="stat-lbl">VUES TOTAL</div><div class="stat-val">${fmt(c.viewsTotal)}</div></div>
+  <div class="stat-card"><div class="stat-lbl">CLIPS RENDUS</div><div class="stat-val">${c.clips||0}</div></div>
+  <div class="stat-card"><div class="stat-lbl">EN ATTENTE</div><div class="stat-val" style="color:var(--amber);">${pendingPay}€</div></div>
+  <div class="stat-card"><div class="stat-lbl">TOTAL PAYÉ</div><div class="stat-val" style="color:var(--green);">${totalPaidOut}€</div></div>
+</div>
+<div class="info-card" style="margin-bottom:1.25rem;">
+  <div class="info-card-title">POSITION LEADERBOARD</div>
+  ${buildMiniLeaderboard(c.id)}
+</div>
+${myNotifs.length?`<div class="info-card">
+  <div class="info-card-title">MES NOTIFICATIONS</div>
+  ${myNotifs.map(n=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);">
+    <div class="notif-dot" style="background:${n.color||'var(--blue)'};"></div>
+    <div style="flex:1;"><div style="font-size:12px;font-weight:600;">${n.title}</div><div style="font-size:11px;color:var(--text3);">${n.sub||''}</div></div>
+  </div>`).join('')}
+</div>`:`<div class="info-card"><div class="info-card-title">MES NOTIFICATIONS</div><div style="color:var(--text3);font-size:12px;">Aucune notification.</div></div>`}
+</div>`;
+}
+
+// ── PROSPECT VIEW ──
+function buildProspectView() {
+  const cl = clippers().filter(c=>c.status==='active');
+  const totalViews = cl.reduce((s,c)=>s+(c.viewsTotal||0),0);
+  const totalClips = cl.reduce((s,c)=>s+(c.clips||0),0);
+  const weekViews = cl.reduce((s,c)=>s+(c.viewsWeek||0),0);
+  const avgVal = cl.length?Math.round(cl.reduce((s,c)=>s+(c.validation||0),0)/cl.length):0;
+  return `<div style="max-width:860px;margin:0 auto;">
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:2rem;text-align:center;margin-bottom:1.5rem;">
+  <div style="font-size:11px;font-weight:800;letter-spacing:.12em;color:var(--blue);margin-bottom:.75rem;">MERIDAS · CLIPPING TEAM</div>
+  <div style="font-size:24px;font-weight:800;margin-bottom:.5rem;">Performances de notre équipe</div>
+  <div style="font-size:13px;color:var(--text2);margin-bottom:1.5rem;">Données en temps réel · ${cl.length} clippers actifs</div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;">
+    <div class="stat-card accent"><div class="stat-lbl">VUES GÉNÉRÉES</div><div class="stat-val">${fmt(totalViews)}</div><div class="stat-sub">${fmt(weekViews)} cette semaine</div></div>
+    <div class="stat-card"><div class="stat-lbl">CLIPS PRODUITS</div><div class="stat-val">${totalClips}</div></div>
+    <div class="stat-card"><div class="stat-lbl">TAUX VALIDATION</div><div class="stat-val">${avgVal}%</div></div>
+  </div>
+</div>
+<div style="font-size:14px;font-weight:800;margin-bottom:1rem;">Catalogue de nos clippers</div>
+<div class="grid-auto">${cl.sort((a,b)=>(b.viewsTotal||0)-(a.viewsTotal||0)).map(c=>`<div class="card" style="border-top:2px solid ${sqMeta[c.squad]?.color||'#00aeef'};">
+  <div class="c-top"><div class="av ${sqMeta[c.squad]?.av||'av-alpha'}" style="border-radius:50%;">${c.initials||'?'}</div>
+    <div><div class="c-name">${c.name}</div><span class="sq-badge ${sqMeta[c.squad]?.cls||'sq-alpha'}">${(c.squad||'').toUpperCase()}</span></div>
+  </div>
+  <div class="c-rows">
+    <div class="c-row"><span class="c-lbl">Niveau</span>${lvlBadge(c.level)}</div>
+    <div class="c-row"><span class="c-lbl">Vues totales</span><span class="c-val" style="color:var(--blue);">${fmt(c.viewsTotal)}</span></div>
+    <div class="c-row"><span class="c-lbl">Vues ce mois</span><span class="c-val">${fmt(c.viewsMonth)}</span></div>
+    <div class="c-row"><span class="c-lbl">Clips</span><span class="c-val">${c.clips||0}</span></div>
+    <div class="c-row"><span class="c-lbl">Taux validation</span><span class="c-val">${c.validation||0}%</span></div>
+  </div>
+  <div class="score-bar"><div class="score-fill" style="width:${score(c)}%;"></div></div>
+  <div class="score-label"><span>Score</span><span>${score(c)}/100</span></div>
+</div>`).join('')}</div></div>`;
+}
+
+// ── CLIENT DASHBOARD ──
+function buildClientDash() {
+  const member = team().find(u=>u.id===currentUser.id);
+  if (!member?.missionId) return `<div style="color:var(--text3);padding:3rem;text-align:center;">Aucune mission associée à votre compte.<br>Contactez votre manager.</div>`;
+  const m = DATA.missions[member.missionId]; if (!m) return '<div style="color:var(--text3);padding:2rem;">Mission introuvable.</div>';
+  const assignees = clippers().filter(c=>c.missionId===m.id);
+  const totalViews = assignees.reduce((s,c)=>s+(c.viewsTotal||0),0);
+  const totalClips = assignees.reduce((s,c)=>s+(c.clips||0),0);
+  const avgVal = assignees.length?Math.round(assignees.reduce((s,c)=>s+(c.validation||0),0)/assignees.length):0;
+  const pct = Math.min(Math.round(totalClips/Math.max(m.clipsRequired||1,1)*100),100);
+  const stCls = {active:'ms-active',paused:'ms-paused',completed:'ms-completed'}[m.status]||'ms-active';
+  const stLbl = {active:'Active',paused:'En pause',completed:'Terminée'}[m.status]||m.status;
+  return `<div style="max-width:860px;">
+<div style="background:var(--bg2);border:1px solid var(--border);border-radius:14px;padding:1.5rem;margin-bottom:1.25rem;">
+  <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+    <div><div class="mc-id">${m.missionId}</div><div style="font-size:22px;font-weight:800;margin-bottom:8px;">${m.name}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;"><span class="mc-status ${stCls}">${stLbl}</span>${m.tags?.map(t=>`<span style="font-size:10px;font-weight:600;padding:2px 8px;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;color:var(--text2);">${t}</span>`).join('')||''}</div>
+    </div>
+    <div style="text-align:right;"><div style="font-size:36px;font-weight:800;color:var(--blue);">${pct}%</div><div style="font-size:10px;font-weight:700;color:var(--text3);">COMPLÉTÉ</div></div>
+  </div>
+  ${m.description?`<div style="margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border);font-size:13px;color:var(--text2);line-height:1.6;">${m.description}</div>`:''}
+  ${m.link?`<div style="margin-top:10px;"><a class="link-btn" href="${m.link}" target="_blank">Accéder aux ressources →</a></div>`:''}
+</div>
+<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:1.25rem;">
+  <div class="stat-card accent"><div class="stat-lbl">CLIPS FOURNIS</div><div class="stat-val">${totalClips}/${m.clipsRequired||0}</div></div>
+  <div class="stat-card"><div class="stat-lbl">VUES GÉNÉRÉES</div><div class="stat-val">${fmt(totalViews)}</div><div class="stat-sub">Obj: ${m.viewsTarget||'—'}</div></div>
+  <div class="stat-card"><div class="stat-lbl">CLIPPERS DÉDIÉS</div><div class="stat-val">${assignees.length}</div></div>
+  <div class="stat-card"><div class="stat-lbl">TAUX VALIDATION</div><div class="stat-val">${avgVal}%</div></div>
+</div>
+<div style="font-size:13px;font-weight:700;margin-bottom:.75rem;">Clippers sur votre mission</div>
+<div class="grid-auto">${assignees.map(c=>`<div class="card" style="border-top:2px solid ${sqMeta[c.squad]?.color||'#00aeef'};">
+  <div class="c-top"><div class="av ${sqMeta[c.squad]?.av||'av-alpha'}" style="border-radius:50%;">${c.initials||'?'}</div>
+    <div><div class="c-name">${c.name}</div><span class="sq-badge ${sqMeta[c.squad]?.cls||'sq-alpha'}">${(c.squad||'').toUpperCase()}</span></div>
+  </div>
+  <div class="c-rows">
+    <div class="c-row"><span class="c-lbl">Vues totales</span><span class="c-val" style="color:var(--blue);">${fmt(c.viewsTotal)}</span></div>
+    <div class="c-row"><span class="c-lbl">Vues ce mois</span><span class="c-val">${fmt(c.viewsMonth)}</span></div>
+    <div class="c-row"><span class="c-lbl">Clips</span><span class="c-val">${c.clips||0}</span></div>
+    <div class="c-row"><span class="c-lbl">Taux validation</span><span class="c-val">${c.validation||0}%</span></div>
+  </div>
+  <div class="score-bar"><div class="score-fill" style="width:${score(c)}%;"></div></div>
+  <div class="score-label"><span>Score</span><span>${score(c)}/100</span></div>
+</div>`).join('')||'<div style="color:var(--text3);font-size:13px;">Aucun clipper assigné.</div>'}
+</div></div>`;
+}
+
+// ── NOTIFICATIONS ──
+function renderNotifBell() {
+  const wrap = document.getElementById('notifBellWrap'); if (!wrap || !isManager()) return;
+  wrap.style.display = 'flex';
+  const unread = notifications().filter(n=>!n.read).length;
+  const cnt = document.getElementById('notifCount');
+  if (cnt) { cnt.textContent = unread; cnt.style.display = unread ? 'flex' : 'none'; }
+}
+
+window.toggleNotifPanel = function() {
+  let panel = document.getElementById('notifPanel');
+  if (panel) { panel.remove(); notifications().forEach(n=>n.read=true); return; }
+  panel = document.createElement('div');
+  panel.id = 'notifPanel';
+  panel.className = 'notif-panel';
+  panel.innerHTML = `<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
+    <div style="font-size:13px;font-weight:700;">Notifications</div>
+    <button class="btn" style="font-size:11px;padding:4px 8px;" onclick="clearNotifs()">Tout effacer</button>
+  </div>
+  ${notifications().length ? notifications().map(n=>`<div class="notif-item${n.read?'':' unread'}">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;"><div class="notif-dot" style="background:${n.color||'var(--blue)'};"></div><div style="font-size:12px;font-weight:700;">${n.title}</div></div>
+    <div style="font-size:11px;color:var(--text3);">${n.sub||''}</div>
+  </div>`).join('') : '<div style="color:var(--text3);font-size:12px;text-align:center;padding:1rem;">Aucune notification.</div>'}`;
+  document.getElementById('mainArea').appendChild(panel);
+  renderNotifBell();
+};
+
+window.clearNotifs = async function() {
+  const snap = await getDocs(collection(db, 'notifications'));
+  snap.forEach(d => deleteDoc(d.ref));
+  const panel = document.getElementById('notifPanel'); if (panel) panel.remove();
+};
+
+async function addNotif(title, sub, color, clipperId, type) {
+  const ref = doc(collection(db, 'notifications'));
+  await setDoc(ref, {id:ref.id, title, sub, color, clipperId:clipperId||null, type, read:false, time:nowMs()});
+}
+
+// ── FIRESTORE ACTIONS ──
+async function addClipper() {
+  const name = document.getElementById('fn-name').value.trim();
+  const initials = document.getElementById('fn-init').value.trim().toUpperCase();
+  if (!name||!initials) { alert('Nom et initiales requis.'); return; }
+  let squad = document.getElementById('fn-squad').value;
+  if (!isAdminOrGM()) { const rm = roleMeta[currentUser.role]; if (rm?.squad) squad = rm.squad; }
+  const code = genCode('clip-');
+  const ref = doc(collection(db, 'clippers'));
+  await setDoc(ref, {id:ref.id,name,initials,squad,level:document.getElementById('fn-level').value,status:document.getElementById('fn-status').value,discord:document.getElementById('fn-discord').value,tiktok:document.getElementById('fn-tiktok').value,instagram:document.getElementById('fn-ig').value,youtube:document.getElementById('fn-yt').value,recruited:document.getElementById('fn-recruited').value||dateStr(),missionId:null,clips:0,viewsWeek:0,viewsMonth:0,viewsTotal:0,review:'pending',validation:0,errors:false,notes:'',missions:[],clipperCode:code,createdAt:nowMs()});
+  closeModal('clipperModal');
+  ['fn-name','fn-init','fn-discord','fn-tiktok','fn-ig','fn-yt','fn-recruited'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+}
+
+async function addMission() {
+  const mId = document.getElementById('fm-id').value.trim();
+  const name = document.getElementById('fm-name').value.trim();
+  if (!mId||!name) { alert('ID et nom requis.'); return; }
+  const tags = document.getElementById('fm-tags').value.split(',').map(t=>t.trim()).filter(Boolean);
+  const ref = doc(collection(db, 'missions'));
+  await setDoc(ref, {id:ref.id,missionId:mId,name,status:document.getElementById('fm-status').value,squad:document.getElementById('fm-squad').value,clipsRequired:parseInt(document.getElementById('fm-clips').value)||0,viewsTarget:document.getElementById('fm-views').value||'—',description:document.getElementById('fm-desc').value,link:document.getElementById('fm-link').value,tags,createdAt:dateStr()});
+  // Auto-generate client code
+  const clientCode = 'client-'+mId.toLowerCase()+'-'+Math.random().toString(36).slice(2,5);
+  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2)||'CL';
+  const cRef = doc(collection(db, 'team'));
+  await setDoc(cRef, {id:cRef.id,name:name+' (client)',role:'client',code:clientCode,initials,missionId:ref.id,createdAt:nowMs()});
+  closeModal('missionModal');
+  ['fm-id','fm-name','fm-clips','fm-views','fm-desc','fm-link','fm-tags'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  alert('Mission créée !\nCode client généré : '+clientCode+'\nPartagez ce code à '+name+' pour accéder à son dashboard.');
+}
+
+async function addMember() {
+  const name = document.getElementById('mm-name').value.trim();
+  const role = document.getElementById('mm-role').value;
+  const code = document.getElementById('mm-code').value.trim();
+  if (!name||code.length<4) { alert('Nom requis et code min. 4 caractères.'); return; }
+  if (team().find(u=>u.code===code)||clippers().find(c=>c.clipperCode===code)) { alert('Code déjà utilisé.'); return; }
+  const initials = name.split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const ref = doc(collection(db, 'team'));
+  await setDoc(ref, {id:ref.id,name,role,code,initials,createdAt:nowMs()});
+  closeModal('memberModal');
+  document.getElementById('mm-name').value='';document.getElementById('mm-code').value='';
+  alert(`Compte créé !\nCode : ${code}\nCommuniquez ce code à ${name}.`);
+}
+
+async function addObjective() {
+  const name = document.getElementById('fo-name').value.trim();
+  const target = parseFloat(document.getElementById('fo-target').value)||0;
+  if (!name||!target) { alert('Nom et cible requis.'); return; }
+  const ref = doc(collection(db, 'objectives'));
+  await setDoc(ref, {id:ref.id,name,type:document.getElementById('fo-type').value,period:document.getElementById('fo-period').value,target,createdAt:nowMs()});
+  closeModal('objModal');
+  document.getElementById('fo-name').value='';document.getElementById('fo-target').value='';
+}
+
+// PAYMENT
+let _payClipperId = null;
+window.openPayModal = function() { _payClipperId=null; populatePayModal(); openModal('payModal'); };
+window.openPayForClipper = function(cid) { _payClipperId=cid; populatePayModal(); document.getElementById('pay-clipper').value=cid; openModal('payModal'); };
+function populatePayModal() {
+  const sel = document.getElementById('pay-clipper');
+  if (sel) sel.innerHTML = clippers().map(c=>`<option value="${c.id}">${c.name} (${c.squad})</option>`).join('');
+  if (_payClipperId && sel) sel.value = _payClipperId;
+  const dateEl = document.getElementById('pay-date');
+  if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
+  selectPayStatus('pending');
+}
+window.selectPayStatus = function(s) {
+  _payStatus = s;
+  ['pending','paid'].forEach(x=>{
+    const el = document.getElementById('pay-status-'+x);
+    if (el) el.className = 's-btn' + (x===s?(x==='paid'?' sel-ok':' sel-pending'):'');
+  });
+};
+async function confirmPayment() {
+  const clipperId = document.getElementById('pay-clipper').value;
+  const amount = parseFloat(document.getElementById('pay-amount').value)||0;
+  const reason = document.getElementById('pay-reason').value.trim();
+  const date = document.getElementById('pay-date').value;
+  if (!clipperId||!amount||!reason||!date) { alert('Tous les champs sont requis.'); return; }
+  const c = DATA.clippers[clipperId]; if (!c) return;
+  const ref = doc(collection(db, 'payments'));
+  await setDoc(ref, {id:ref.id,clipperId,clipperName:c.name,amount,reason,date,status:_payStatus,time:nowMs()});
+  // Notify clipper
+  await addNotif(_payStatus==='paid'?'Paiement reçu ✓':'Paiement en attente',`${amount}€ — ${reason}`,_payStatus==='paid'?'var(--green)':'var(--amber)',clipperId,'payment');
+  closeModal('payModal');
+  document.getElementById('pay-amount').value='';document.getElementById('pay-reason').value='';
+}
+
+async function markPayPaid(id) {
+  await updateDoc(doc(db,'payments',id),{status:'paid'});
+  const p = DATA.payments[id]; if (p) await addNotif('Paiement reçu ✓',`${p.amount}€ — ${p.reason}`,'var(--green)',p.clipperId,'payment');
+}
+async function deletePaymentFn(id) {
+  if (!confirm('Supprimer ce paiement ?')) return;
+  await deleteDoc(doc(db,'payments',id));
+  if (currentPage==='detail') { document.getElementById('mainContent').innerHTML=buildDetail(); }
+}
+
+// CLIPPER ACTIONS
+async function setReview(id,val) { await updateDoc(doc(db,'clippers',id),{review:val}); }
+async function setLevel(id,val) { await updateDoc(doc(db,'clippers',id),{level:val}); }
+async function setStatus(id,val) { await updateDoc(doc(db,'clippers',id),{status:val}); }
+async function toggleError(id) { const c=DATA.clippers[id]; if(!c) return; await updateDoc(doc(db,'clippers',id),{errors:!c.errors}); }
+async function assignMission(clipperId,mId) { await updateDoc(doc(db,'clippers',clipperId),{missionId:mId||null}); }
+async function saveNotes(id) { const el=document.getElementById('notesArea'); if(!el) return; await updateDoc(doc(db,'clippers',id),{notes:el.value}); }
+async function deleteClipperFn(id) { if(!confirm('Supprimer ce clipper ?')) return; await deleteDoc(doc(db,'clippers',id)); navTo('clippers'); }
+async function deletePaymentFnGlobal(id) { if(!confirm('Supprimer ?')) return; await deleteDoc(doc(db,'payments',id)); }
+
+// EDIT MODAL
+window.startEdit = function(id,field,title,current,isNum) { _editId=id;_editField=field;_editNum=isNum; document.getElementById('editTitle').textContent='Modifier — '+title; const inp=document.getElementById('editInput'); inp.type=isNum?'number':'text';inp.value=current; document.getElementById('editOverlay').classList.add('open'); setTimeout(()=>inp.focus(),50); };
+window.startEditStr = function(id,field,title,current) { window.startEdit(id,field,title,current,false); };
+window.cancelEdit = function() { document.getElementById('editOverlay').classList.remove('open'); };
+window.confirmEdit = async function() {
+  const c=DATA.clippers[_editId]; if(!c) return;
+  const val=document.getElementById('editInput').value;
+  await updateDoc(doc(db,'clippers',_editId),{[_editField]:_editNum?(parseFloat(val)||0):val});
+  document.getElementById('editOverlay').classList.remove('open');
+};
+
+// MISSION ACTIONS
+async function setMissionStatus(id,val) { await updateDoc(doc(db,'missions',id),{status:val}); goMissionDetail(id); }
+async function deleteMissionFn(id) { if(!confirm('Supprimer ?')) return; clippers().forEach(async c=>{if(c.missionId===id)await updateDoc(doc(db,'clippers',c.id),{missionId:null});}); await deleteDoc(doc(db,'missions',id)); navTo('missions'); }
+
+// OBJECTIVES
+window.deleteObj = async function(id) { await deleteDoc(doc(db,'objectives',id)); };
+window.openSqObjModal = function(sq) { _sqForObj=sq; document.getElementById('sqo-label').textContent='Escouade '+(sq[0].toUpperCase()+sq.slice(1)); openModal('sqObjModal'); };
+window.confirmSqObj = async function() {
+  const name=document.getElementById('sqo-name').value.trim();const target=parseFloat(document.getElementById('sqo-target').value)||0;
+  if(!name||!target){alert('Requis.');return;}
+  const ref=doc(collection(db,'squadObjectives_'+_sqForObj));
+  await setDoc(ref,{id:ref.id,name,type:document.getElementById('sqo-type').value,target});
+  closeModal('sqObjModal');document.getElementById('sqo-name').value='';document.getElementById('sqo-target').value='';
+};
+window.deleteSqObj = async function(sq,id) { await deleteDoc(doc(db,'squadObjectives_'+sq,id)); };
+
+// TEAM
+async function deleteMemberFn(id) { if(!confirm('Supprimer ?')) return; await deleteDoc(doc(db,'team',id)); }
+window.linkClientMission = async function(memberId,mId) { await updateDoc(doc(db,'team',memberId),{missionId:mId||null}); };
+
+// CALENDAR / TASKS
+window.openTaskModal = function(ds) {
+  const el=document.getElementById('at-date'); if(el&&ds)el.value=ds; else if(el)el.value=new Date().toISOString().split('T')[0];
+  const cs=document.getElementById('at-clipper'); if(cs)cs.innerHTML=`<option value="">Aucun</option>`+clippers().map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  openModal('addTaskModal');
+};
+async function confirmAddTask() {
+  const title=document.getElementById('at-title').value.trim();const date=document.getElementById('at-date').value;
+  if(!title||!date){alert('Titre et date requis.');return;}
+  const cid=document.getElementById('at-clipper').value||null;
+  const ref=doc(collection(db,'tasks'));
+  await setDoc(ref,{id:ref.id,title,date,assignedTo:document.getElementById('at-squad').value,status:'pending',validation:null,clipperId:cid,note:document.getElementById('at-note').value,createdAt:nowMs()});
+  closeModal('addTaskModal');document.getElementById('at-title').value='';document.getElementById('at-note').value='';
+  if(currentPage==='calDay')document.getElementById('mainContent').innerHTML=buildCalDay();
+  else renderContent();
+}
+window.setTaskStatus = async function(id,val) {
+  const t=DATA.tasks[id]; if(!t) return;
+  await updateDoc(doc(db,'tasks',id),{status:val});
+  if(val==='done'&&t.clipperId){const c=DATA.clippers[t.clipperId];if(c&&c.review==='pending')await updateDoc(doc(db,'clippers',t.clipperId),{review:'ok'});}
+  if(currentPage==='calDay')document.getElementById('mainContent').innerHTML=buildCalDay();
+};
+window.setTaskValidation = async function(id,val) {
+  const t=DATA.tasks[id]; if(!t) return;
+  await updateDoc(doc(db,'tasks',id),{validation:val});
+  if(t.clipperId){
+    const rv=val===100?'ok':'revision';
+    await updateDoc(doc(db,'clippers',t.clipperId),{review:rv});
+    const c=DATA.clippers[t.clipperId];
+    if(c)await addNotif(val===100?'Review validée à 100%':val===50?'Review à 50%':'Review non validée',c.name,val===100?'var(--green)':val===50?'var(--amber)':'var(--red)',t.clipperId,'review');
+  }
+  if(currentPage==='calDay')document.getElementById('mainContent').innerHTML=buildCalDay();
+};
+window.deleteTaskFn = async function(id) { await deleteDoc(doc(db,'tasks',id)); if(currentPage==='calDay')document.getElementById('mainContent').innerHTML=buildCalDay(); else renderContent(); };
+
+// CAPTURE
+window.doCapture = function() { html2canvas(document.getElementById('appRoot'),{backgroundColor:'#0d0d0f',scale:2,useCORS:true}).then(canvas=>{const a=document.createElement('a');a.download='meridas-'+currentPage+'.png';a.href=canvas.toDataURL('image/png');a.click();}); };
+
+// MODALS
+window.openModal = function(id) { document.getElementById(id)?.classList.add('open'); };
+window.closeModal = function(id) { document.getElementById(id)?.classList.remove('open'); };
+window.openClipper = function() { openModal('clipperModal'); };
+window.openMission = function() { openModal('missionModal'); };
+
+// MODAL GLOBALS
+window.addClipper = addClipper;
+window.addMission = addMission;
+window.addMember = addMember;
+window.addObjective = addObjective;
+window.confirmPayment = confirmPayment;
+window.confirmAddTask = confirmAddTask;
+window.doLogin = doLogin;
+window.doLogout = doLogout;
+window.doRegister = doRegister;
+window.toggleRegister = toggleRegister;
+window.navTo = navTo;
+window.goDetail = goDetail;
+window.goMissionDetail = goMissionDetail;
+window.openCalDay = openCalDay;
+window.setReview = setReview;
+window.setLevel = setLevel;
+window.setStatus = setStatus;
+window.toggleError = toggleError;
+window.assignMission = assignMission;
+window.saveNotes = saveNotes;
+window.deleteClipperFn = deleteClipperFn;
+window.markPayPaid = markPayPaid;
+window.deletePaymentFn = deletePaymentFn;
+window.setMissionStatus = setMissionStatus;
+window.deleteMissionFn = deleteMissionFn;
+window.deleteMemberFn = deleteMemberFn;
+window.setFilter = window.setFilter;
+
+// KEYBOARD
+document.getElementById('loginCode').addEventListener('keydown', e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('editInput')?.addEventListener('keydown', e=>{if(e.key==='Enter')window.confirmEdit();if(e.key==='Escape')window.cancelEdit();});
+document.querySelectorAll('.overlay').forEach(o=>{o.addEventListener('click',e=>{if(e.target===o&&o.id!=='editOverlay')o.classList.remove('open');});});
+
+// INIT
+initFirebase().then(()=>{subscribeAll();});
+</script>
+</body>
+</html>
