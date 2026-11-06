@@ -1,33 +1,38 @@
-# 🚀 Meridas Internal Dashboard | Clipping Team Management
-Meridas Internal Dashboard est une solution propriétaire de gestion et de suivi de performances conçue exclusivement pour l'agence Meridas Incubator.
+# Paul — Portfolio
 
-C'est le premier outil du genre dans l'industrie du clipping, remplaçant les méthodes de suivi archaïques par une interface web fluide, sécurisée et orientée data.
+Portfolio créatif, 100 % statique (HTML / CSS / JS), hébergé gratuitement sur **GitHub Pages**.
 
-# 🎯 Vision du Projet
+**Au programme :** shader WebGL qui tourbillonne sous le curseur (clic = nouvelle palette), titre « cinétique » dont la graisse réagit à la souris, préloader, smooth scroll, marquee qui suit la vitesse du scroll, galerie de projets horizontale avec visuels génératifs animés, cartes empilées, playground de particules, curseur custom et boutons magnétiques.
 
-L'objectif est d'offrir une autonomie totale aux clippers tout en simplifiant le workflow des managers. Grâce à un système d'accès par codes uniques, chaque membre accède à un espace personnalisé sans nécessiter de base de données complexe ou d'inscriptions lourdes.
+## Mettre en ligne (gratuit)
 
-# ✨ Fonctionnalités Clés
+1. Fusionner cette branche dans `main`.
+2. Sur GitHub : **Settings → Pages → Build and deployment**
+   - Source : `Deploy from a branch`
+   - Branch : `main` / `/ (root)` → **Save**
+3. Après 1 à 2 minutes, le site est en ligne sur `https://paul-7fv.github.io/<nom-du-repo>/`.
 
-👤 Pour les Clippers
+> Astuce : renomme le repo en `paul-7fv.github.io` pour avoir l'adresse courte `https://paul-7fv.github.io`.
 
-Accès Sécurisé : Connexion via un code d'identification unique assigné par la direction.
+## Personnaliser
 
-Stats Tracking : Visualisation claire des métriques de performance (vues, reach, engagement).
+| Quoi | Où |
+| --- | --- |
+| E-mail + projets (nom, texte, tags, couleurs, lien, visuel) | objet `CONFIG` en haut de `assets/js/main.js` |
+| Textes (hero, manifeste, expertises, contact) | `index.html` |
+| Couleurs & typos | variables `:root` dans `assets/css/style.css` |
+| Palettes du fond animé | tableau `palettes` dans `assets/js/shader.js` |
+| Liens réseaux sociaux | footer dans `index.html` |
 
-Progression : Suivi de l'évolution au sein de l'incubateur.
+Visuels génératifs disponibles pour `art` : `bars`, `rings`, `grid`, `waves`, `blobs`.
 
+## Tester en local
 
-💼 Pour les Managers
+```bash
+python3 -m http.server 8000
+# puis ouvrir http://localhost:8000
+```
 
-Squad Management : Interface dédiée pour remplir et mettre à jour les infos des clippers.
+## Stack
 
-Data Entry : Système simplifié pour l'entrée des données hebdomadaires/mensuelles.
-
-Overview : Vue d'ensemble sur la santé et l'activité de chaque escouade.
-
-
-# 🔒 Confidentialité & Sécurité
-
-[!IMPORTANT]
-Ce projet est un outil interne propriétaire. Le code source contient la structure du dashboard, mais les données sensibles et les accès sont gérés de manière isolée pour garantir la confidentialité des membres de Meridas Incubator.
+HTML/CSS/JS vanilla · WebGL natif · [GSAP](https://gsap.com) + ScrollTrigger · [Lenis](https://lenis.darkroom.engineering) (librairies embarquées dans `assets/vendor/`, aucune dépendance externe hormis Google Fonts). Respecte `prefers-reduced-motion`.
