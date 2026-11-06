@@ -440,8 +440,8 @@ const CONFIG = {
   stack.forEach((card, i) => {
     if (i === stack.length - 1) return;
     gsap.to(card, {
-      scale: 0.9, filter: "brightness(.55)", ease: "none",
-      scrollTrigger: { trigger: stack[i + 1], start: "top bottom", end: "top 20%", scrub: true },
+      scale: 0.92, filter: "brightness(.7)", ease: "none",
+      scrollTrigger: { trigger: stack[i + 1], start: "top 55%", end: "top 12%", scrub: true },
     });
   });
 
